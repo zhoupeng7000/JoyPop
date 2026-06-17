@@ -1,8 +1,9 @@
 // =============================================
-// JoyPop 主菜单场景 v2 - 精致版
+// JoyPop 主菜单场景 v3 - 全实体绘制版
 // =============================================
 import { SaveSystem } from '../utils/SaveSystem.js';
 import { APIClient } from '../utils/APIClient.js';
+import { ModalSystem } from '../utils/ModalSystem.js';
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() { super({ key: 'MainMenuScene' }); }
@@ -15,177 +16,331 @@ export class MainMenuScene extends Phaser.Scene {
     this.cameras.main.fadeIn(400);
 
     this._drawBackground(width, height);
-    this._drawTopHUD(width);
-    this._drawTitle(width);
-    this._drawBunnyAndBubble(width, height);
-    this._drawButtons(width, height);
+    this._drawTopHUD(width, height);
+    this._drawTitle(width, height);
+    this._drawCharacter(width, height);
+    this._drawPlayButton(width, height);
+    this._drawNavBar(width, height, 0);
     this._drawFloatingParticles(width, height);
     this._checkDailyReward();
   }
 
   // ── 背景 ─────────────────────────────────
   _drawBackground(width, height) {
-    const bg = this.add.image(width / 2, height / 2, 'main_menu_bg');
-    bg.setDisplaySize(width, height);
+    // 先尝试加载背景图，失败则用渐变
+    if (this.textures.exists('main_menu_bg')) {
+      const bg = this.add.image(width / 2, height / 2, 'main_menu_bg');
+      bg.setDisplaySize(width, height);
+    } else {
+      // 程序化渐变背景
+      const bg = this.add.graphics();
+      bg.fillGradientStyle(0xffd6f0, 0xffd6f0, 0xffecd2, 0xffe4f5, 1);
+      bg.fillRect(0, 0, width, height);
+      // 顶部大圆弧装饰
+      const arc = this.add.graphics();
+      arc.fillStyle(0xff6eb4, 0.12);
+      arc.fillCircle(width * 0.85, -height * 0.1, height * 0.55);
+      const arc2 = this.add.graphics();
+      arc2.fillStyle(0xc77dff, 0.10);
+      arc2.fillCircle(width * 0.1, height * 0.9, height * 0.45);
+    }
   }
 
   // ── 顶部 HUD ─────────────────────────────
-  _drawTopHUD(width) {
-    const { height } = this.cameras.main;
+  _drawTopHUD(width, height) {
     const d = this.saveData;
     const g = this.add.graphics();
+    g.setDepth(10);
 
-    // 根据背景图比例计算顶部 HUD 尺寸和位置
-    const hudY = height * 0.055; 
-    const hudH = height * 0.063; 
-    const profW = width * 0.38; 
-    
-    // 1. 左上角玩家 Profile 覆盖胶囊
-    g.fillStyle(0xfff4f8, 1);
-    g.lineStyle(3, 0xffb3d9, 1);
-    g.fillRoundedRect(12, hudY, profW, hudH, hudH / 2);
-    g.strokeRoundedRect(12, hudY, profW, hudH, hudH / 2);
+    const hudY = height * 0.016;
+    const hudH = height * 0.068;
+    const profW = width * 0.42;
 
-    const profHit = this.add.rectangle(12 + profW/2, hudY + hudH/2, profW, hudH).setInteractive();
+    // 1. 玩家 Profile 胶囊
+    g.fillStyle(0xffffff, 0.96);
+    g.lineStyle(2.5, 0xffb3d9, 1);
+    g.fillRoundedRect(10, hudY, profW, hudH, hudH / 2);
+    g.strokeRoundedRect(10, hudY, profW, hudH, hudH / 2);
+
+    // 头像圆
+    const avatarSize = hudH * 0.78;
+    const avatarX = 10 + hudH / 2;
+    const avatarY = hudY + hudH / 2;
+    g.fillStyle(0xffd6f0, 1);
+    g.fillCircle(avatarX, avatarY, avatarSize / 2);
+    g.lineStyle(2, 0xff6eb4, 1);
+    g.strokeCircle(avatarX, avatarY, avatarSize / 2);
+    this.add.text(avatarX, avatarY, '🦊', {
+      fontSize: `${Math.floor(avatarSize * 0.55)}px`,
+    }).setOrigin(0.5).setDepth(11);
+
+    // 等级徽章
+    const lvlBg = this.add.graphics().setDepth(11);
+    const lvlX = avatarX + avatarSize / 2 + 8;
+    const lvlW = profW - avatarSize - 28;
+    lvlBg.fillStyle(0x7950f2, 1);
+    lvlBg.fillRoundedRect(lvlX, hudY + 6, lvlW * 0.42, hudH * 0.3, 6);
+    this.add.text(lvlX + lvlW * 0.21, hudY + 6 + (hudH * 0.3) / 2,
+      `Lv.${d.player.level}`, {
+        fontSize: `${Math.floor(hudH * 0.21)}px`, fontFamily: 'Nunito, sans-serif',
+        fontStyle: 'bold', fill: '#ffffff',
+      }).setOrigin(0.5).setDepth(12);
+
+    this.add.text(lvlX, hudY + hudH * 0.5, d.player.name, {
+      fontSize: `${Math.floor(hudH * 0.26)}px`, fontFamily: 'Nunito, sans-serif',
+      fontStyle: 'bold', fill: '#5a2d82',
+    }).setDepth(12);
+
+    // 点击打开个人主页
+    const profHit = this.add.zone(10 + profW / 2, hudY + hudH / 2, profW, hudH)
+      .setInteractive().setDepth(13);
     profHit.on('pointerdown', () => {
       const logged = SaveSystem.getCurrentUser();
-      if (logged) {
-        this._showProfileModal();
-      } else {
-        this._showAuthModal('login');
-      }
+      if (logged) ModalSystem.showProfileModal(this, this.saveData);
+      else ModalSystem.showAuthModal(this, this.saveData, 'login');
     });
 
-    // 头像背景圈和文字
-    const avatarSize = hudH * 0.8;
-    const avatarX = 12 + hudH / 2;
-    const avatarY = hudY + hudH / 2;
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(avatarX, avatarY, avatarSize / 2);
-    g.strokeCircle(avatarX, avatarY, avatarSize / 2);
-    this.add.text(avatarX, avatarY, '🦊', { fontSize: `${Math.floor(avatarSize * 0.6)}px` }).setOrigin(0.5);
+    // 2. 右上角胶囊行
+    const rightH = height * 0.05;
+    const rightY = hudY + (hudH - rightH) / 2;
+    const pill1X = width * 0.638;
+    const pill2X = width * 0.82;
+    const pillW = width * 0.162;
 
-    // 等级背景框
-    const lvlPill = this.add.graphics();
-    lvlPill.fillStyle(0x448aff, 1);
-    lvlPill.fillRoundedRect(avatarX + avatarSize/2 + 8, hudY + 6, profW - avatarSize - 24, hudH * 0.32, 8);
+    // 爱心胶囊
+    g.fillStyle(0xffffff, 0.96);
+    g.fillRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+    g.strokeRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+    this.add.text(pill1X + pillW / 2, rightY + rightH / 2,
+      `❤️ ${d.player.hearts}`, {
+        fontSize: `${Math.floor(rightH * 0.48)}px`, fontFamily: 'Nunito, sans-serif',
+        fontStyle: 'bold', fill: '#ff4757',
+      }).setOrigin(0.5).setDepth(11);
 
-    // 等级和用户名文字
-    this.add.text(avatarX + avatarSize/2 + 8 + (profW - avatarSize - 24)/2, hudY + 6 + (hudH * 0.32)/2, `Lv.${d.player.level}`, {
-      fontSize: `${Math.floor(hudH * 0.22)}px`, fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ffffff',
-    }).setOrigin(0.5);
-
-    this.add.text(avatarX + avatarSize/2 + 8, hudY + hudH * 0.52, d.player.name, {
-      fontSize: `${Math.floor(hudH * 0.24)}px`, fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#5a2d82',
-    });
-
-    // 2. 右上角体力爱心胶囊
-    const heartX = width * 0.635; 
-    const heartW = width * 0.17; 
-    const rightPillH = height * 0.046; 
-    const rightPillY = height * 0.040; 
-
-    g.fillStyle(0xfff4f8, 1);
-    g.fillRoundedRect(heartX, rightPillY, heartW, rightPillH, rightPillH / 2);
-    g.strokeRoundedRect(heartX, rightPillY, heartW, rightPillH, rightPillH / 2);
-
-    this.add.text(heartX + heartW/2, rightPillY + rightPillH/2, `❤️ ${d.player.hearts}`, {
-      fontSize: `${Math.floor(rightPillH * 0.47)}px`, fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ff4757',
-    }).setOrigin(0.5);
-
-    // 3. 右上角金币胶囊
-    const coinX = width * 0.81; 
-    const coinW = width * 0.17; 
-
-    g.fillStyle(0xfff4f8, 1);
-    g.fillRoundedRect(coinX, rightPillY, coinW, rightPillH, rightPillH / 2);
-    g.strokeRoundedRect(coinX, rightPillY, coinW, rightPillH, rightPillH / 2);
-
-    this.add.text(coinX + coinW/2, rightPillY + rightPillH/2, `🪙 ${d.player.coins}`, {
-      fontSize: `${Math.floor(rightPillH * 0.44)}px`, fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ff9f5a',
-    }).setOrigin(0.5);
+    // 金币胶囊
+    g.fillStyle(0xffffff, 0.96);
+    g.fillRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+    g.strokeRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+    this.add.text(pill2X + pillW / 2, rightY + rightH / 2,
+      `🪙 ${d.player.coins}`, {
+        fontSize: `${Math.floor(rightH * 0.44)}px`, fontFamily: 'Nunito, sans-serif',
+        fontStyle: 'bold', fill: '#ff9f5a',
+      }).setOrigin(0.5).setDepth(11);
   }
 
   // ── 标题 ─────────────────────────────────
-  _drawTitle(width) {
-    // 标题与角色已完美融合在背景图中，此处仅作预留，不额外创建文字
+  _drawTitle(width, height) {
+    const titleY = height * 0.16;
+    // 如果背景图已包含标题，跳过绘制以免重叠
+    if (this.textures.exists('main_menu_bg')) return;
+
+    // 标题阴影
+    this.add.text(width / 2 + 3, titleY + 3, 'JoyPop', {
+      fontSize: `${Math.floor(height * 0.085)}px`,
+      fontFamily: 'Nunito, sans-serif',
+      fontStyle: 'bold',
+      fill: 'rgba(180,60,120,0.25)',
+    }).setOrigin(0.5).setDepth(5);
+
+    this.add.text(width / 2, titleY, 'JoyPop', {
+      fontSize: `${Math.floor(height * 0.085)}px`,
+      fontFamily: 'Nunito, sans-serif',
+      fontStyle: 'bold',
+      fill: '#ff6eb4',
+      stroke: '#ffffff',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(6);
+
+    this.add.text(width / 2, titleY + height * 0.065, '欢乐消消乐', {
+      fontSize: `${Math.floor(height * 0.028)}px`,
+      fontFamily: 'Nunito, sans-serif',
+      fontStyle: 'bold',
+      fill: '#9b59b6',
+      letterSpacing: 6,
+    }).setOrigin(0.5).setDepth(6);
   }
 
-  // ── 小兔角色 + 气泡 ───────────────────────
-  _drawBunnyAndBubble(width, height) {
-    // 角色与对话框已完美融合在背景图中，此处仅作预留，不额外创建文字
-  }
+  // ── 中央角色 ─────────────────────────────
+  _drawCharacter(width, height) {
+    if (this.textures.exists('main_menu_bg')) return;
 
-  // ── 按钮组 ────────────────────────────────
-  _drawButtons(width, height) {
     const cx = width / 2;
+    const charY = height * 0.46;
 
-    // 1. 开始游戏按钮高光交互热区 (覆盖原图中的“开始游戏”金色按钮)
-    // 适配高度比，中心 Y 点在 height * 0.656 处，尺寸 w: width * 0.533, h: height * 0.0825
-    const playY = height * 0.656;
-    const playW = width * 0.533;
-    const playH = height * 0.0825;
+    // 光晕底盘
+    const glow = this.add.graphics().setDepth(4);
+    glow.fillStyle(0xffd6f0, 0.55);
+    glow.fillEllipse(cx, charY + height * 0.085, width * 0.55, height * 0.065);
 
-    const playBtnGlow = this.add.graphics();
-    playBtnGlow.fillStyle(0xffffff, 0);
-    playBtnGlow.fillRoundedRect(cx - playW/2, playY - playH/2, playW, playH, playH/2);
+    // 使用已生成的 bunny 纹理
+    const bunnyKey = this.textures.exists('bunny_happy') ? 'bunny_happy'
+      : this.textures.exists('bunny') ? 'bunny' : null;
 
-    const hit = this.add.rectangle(cx, playY, playW, playH).setInteractive();
-    hit.on('pointerdown', () => {
-      playBtnGlow.clear();
-      playBtnGlow.fillStyle(0xffffff, 0.4);
-      playBtnGlow.fillRoundedRect(cx - playW/2, playY - playH/2, playW, playH, playH/2);
-      this.time.delayedCall(120, () => {
+    if (bunnyKey) {
+      const b = this.add.image(cx, charY, bunnyKey)
+        .setScale(Math.min(width / 320, 1.4))
+        .setDepth(5);
+      this.tweens.add({
+        targets: b, y: charY - 10,
+        duration: 1500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+    } else {
+      // 备用：文字兔子
+      const bunnyText = this.add.text(cx, charY, '🐰', {
+        fontSize: `${Math.floor(height * 0.14)}px`,
+      }).setOrigin(0.5).setDepth(5);
+      this.tweens.add({
+        targets: bunnyText, y: charY - 12,
+        duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+    }
+  }
+
+  // ── 开始游戏按钮 ─────────────────────────
+  _drawPlayButton(width, height) {
+    const cx = width / 2;
+    const hasBg = this.textures.exists('main_menu_bg');
+
+    // 背景图已包含按钮视觉 → 只需放透明热区
+    // 无背景图 → 绘制实体渐变按钮
+    if (hasBg) {
+      // 坐标与原背景图中"开始游戏"按钮对齐
+      const btnY = height * 0.656;
+      const btnW = width * 0.533;
+      const btnH = height * 0.0825;
+
+      const hit = this.add.zone(cx, btnY, btnW, btnH).setInteractive().setDepth(17);
+      hit.on('pointerdown', () => {
         this.cameras.main.fadeOut(280, 200, 100, 150);
         this.cameras.main.once('camerafadeoutcomplete', () =>
           this.scene.start('MapScene', { saveData: this.saveData })
         );
       });
-    });
-    hit.on('pointerover', () => {
-      playBtnGlow.clear();
-      playBtnGlow.fillStyle(0xffffff, 0.2);
-      playBtnGlow.fillRoundedRect(cx - playW/2, playY - playH/2, playW, playH, playH/2);
-    });
-    hit.on('pointerout', () => {
-      playBtnGlow.clear();
-    });
+    } else {
+      // ── 无背景图时绘制实体按钮 ──
+      const btnY = height * 0.72;
+      const btnW = width * 0.58;
+      const btnH = height * 0.075;
+      const r = btnH / 2;
 
-    // 2. 底部奶油色导航栏 (透明热区，完美贴合背景设计图)
-    const navH = height * 0.086;
-    const navItems = [
-      { action: () => {} },
-      { action: () => this.scene.start('PetScene', { saveData: this.saveData }) },
-      { action: () => this._showAchievementsModal() },
-      { action: () => this._showDailyModal() },
-      { action: () => this._showLeaderboardModal() },
+      const shadow = this.add.graphics().setDepth(14);
+      shadow.fillStyle(0xd44f8e, 0.35);
+      shadow.fillRoundedRect(cx - btnW / 2 + 3, btnY - btnH / 2 + 5, btnW, btnH, r);
+
+      const btn = this.add.graphics().setDepth(15);
+      btn.fillGradientStyle(0xff9f5a, 0xff6eb4, 0xff6eb4, 0xff9f5a, 1);
+      btn.fillRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+      btn.lineStyle(3, 0xffffff, 0.85);
+      btn.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+      btn.fillStyle(0xffffff, 0.22);
+      btn.fillEllipse(cx, btnY - btnH / 4, btnW * 0.65, btnH * 0.38);
+
+      const btnLabel = this.add.text(cx, btnY, '⭐  开始游戏  ⭐', {
+        fontSize: `${Math.floor(btnH * 0.36)}px`,
+        fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+        fill: '#ffffff', stroke: 'rgba(160,40,80,0.3)', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(16);
+
+      const hit = this.add.zone(cx, btnY, btnW, btnH).setInteractive().setDepth(17);
+      hit.on('pointerdown', () => {
+        this.tweens.add({ targets: [btn, btnLabel], scaleX: 0.95, scaleY: 0.95, duration: 80, yoyo: true });
+        this.time.delayedCall(130, () => {
+          this.cameras.main.fadeOut(280, 200, 100, 150);
+          this.cameras.main.once('camerafadeoutcomplete', () =>
+            this.scene.start('MapScene', { saveData: this.saveData })
+          );
+        });
+      });
+      hit.on('pointerover', () =>
+        this.tweens.add({ targets: [btn, btnLabel], scaleX: 1.04, scaleY: 1.04, duration: 100 })
+      );
+      hit.on('pointerout', () =>
+        this.tweens.add({ targets: [btn, btnLabel], scaleX: 1, scaleY: 1, duration: 100 })
+      );
+
+      const pulse = this.add.graphics().setDepth(14);
+      pulse.lineStyle(3, 0xff6eb4, 0.5);
+      pulse.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+      this.tweens.add({ targets: pulse, scaleX: 1.06, scaleY: 1.3, alpha: 0, duration: 1200, repeat: -1 });
+    }
+  }
+
+  // ── 底部导航栏 ────────────────────────────
+  _drawNavBar(width, height, activeIndex = 0) {
+    const hasBg = this.textures.exists('main_menu_bg');
+    const navH = height * 0.088;
+    const navY = height - navH - 2;
+
+    const actions = [
+      () => {},  // 首页（当前）
+      () => this.scene.start('MapScene', { saveData: this.saveData }),
+      () => this.scene.start('PetScene', { saveData: this.saveData }),
+      () => ModalSystem.showDailyModal(this, this.saveData),
+      () => ModalSystem.showGlobalLeaderboardModal(this),
     ];
+    const labels = ['首页', '地图', '宠物', '奖励', '排行'];
+    const emojis = ['🏠', '🗺️', '🐰', '🎁', '🏆'];
 
-    const itemW = width / navItems.length;
-    navItems.forEach((item, i) => {
-      const x = itemW * i + itemW / 2;
-      const y = height * 0.908;
+    if (hasBg) {
+      // 背景图已有导航栏视觉 → 仅铺透明热区（与原图对齐）
+      const itemW = width / actions.length;
+      actions.forEach((action, i) => {
+        const cx = itemW * i + itemW / 2;
+        const cy = height * 0.908;
+        const hit = this.add.zone(cx, cy, itemW - 4, navH)
+          .setInteractive().setDepth(83);
+        hit.on('pointerdown', action);
+      });
+    } else {
+      // 无背景图 → 绘制实体导航栏
+      const bg = this.add.graphics().setDepth(80);
+      bg.fillStyle(0xffffff, 0.97);
+      bg.fillRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
+      bg.lineStyle(2.5, 0xffb3d9, 1);
+      bg.strokeRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
 
-      const navHit = this.add.rectangle(x, y, itemW - 4, navH).setInteractive();
-      navHit.on('pointerdown', item.action);
-    });
+      const itemW = (width - 16) / actions.length;
+      actions.forEach((action, i) => {
+        const cx = 8 + itemW * i + itemW / 2;
+        const cy = navY + 4 + (navH - 4) / 2;
+
+        if (i === activeIndex) {
+          const pill = this.add.graphics().setDepth(81);
+          pill.fillStyle(0xff6eb4, 1);
+          pill.fillRoundedRect(cx - 28, cy - 20, 56, 40, 20);
+        }
+
+        const labelColor = i === activeIndex ? '#ffffff' : '#b39ddb';
+        this.add.text(cx, cy - 10, emojis[i], { fontSize: '19px' })
+          .setOrigin(0.5).setDepth(82);
+        this.add.text(cx, cy + 12, labels[i], {
+          fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+          fontStyle: 'bold', fill: labelColor,
+        }).setOrigin(0.5).setDepth(82);
+
+        const hit = this.add.zone(cx, cy, itemW - 4, navH - 4)
+          .setInteractive().setDepth(83);
+        hit.on('pointerdown', action);
+      });
+    }
   }
 
   // ── 浮动粒子装饰 ─────────────────────────
   _drawFloatingParticles(width, height) {
     const pool = ['⭐', '✨', '💫', '🌟', '🎀', '🍓', '💎', '🌸', '🍭', '🌺'];
-    for (let i = 0; i < 14; i++) {
+    const navH = height * 0.088;
+    for (let i = 0; i < 12; i++) {
       const x = Phaser.Math.Between(15, width - 15);
-      const y = Phaser.Math.Between(290, height - 90);
+      const y = Phaser.Math.Between(280, height - navH - 80);
       const icon = pool[Math.floor(Math.random() * pool.length)];
       const sz = Phaser.Math.Between(13, 22);
       const d = this.add.text(x, y, icon, { fontSize: `${sz}px` })
-        .setAlpha(Phaser.Math.FloatBetween(0.25, 0.75));
+        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.65)).setDepth(7);
       this.tweens.add({
         targets: d,
         y: y - Phaser.Math.Between(18, 48),
-        x: x + Phaser.Math.Between(-22, 22),
-        alpha: 0.1,
+        x: x + Phaser.Math.Between(-20, 20),
+        alpha: 0.05,
         duration: 2200 + Math.random() * 3000,
         yoyo: true, repeat: -1,
         delay: Math.random() * 2500,
@@ -197,331 +352,9 @@ export class MainMenuScene extends Phaser.Scene {
   _checkDailyReward() {
     const check = SaveSystem.checkDailyReward(this.saveData);
     if (check.available) {
-      this.time.delayedCall(1600, () => this._showDailyModal());
+      this.time.delayedCall(1600, () => ModalSystem.showDailyModal(this, this.saveData));
     }
   }
 
-  // ── 弹窗 ─────────────────────────────────
-  _showDailyModal() {
-    const check = SaveSystem.checkDailyReward(this.saveData);
-    const streak = (this.saveData.dailyReward?.streak || 0) + 1;
-    const content = check.available
-      ? `连续签到第 ${streak} 天！\n奖励：🪙 ${streak * 20} 金币`
-      : `今日已签到 ✅\n明天再来哦！`;
-
-    const btns = check.available
-      ? [{ text: '🎁 领取奖励', color: 'primary', onClick: () => {
-          SaveSystem.claimDailyReward(this.saveData);
-          this._hideModal();
-          this.scene.restart(); // ✅ 重启场景刷新 HUD
-        }}]
-      : [{ text: '好的~', color: 'secondary', onClick: () => this._hideModal() }];
-
-    this._showModal('📅 每日签到', content, btns);
-  }
-
-  _showAchievementsModal() {
-    this._showModal('🏆 我的成就',
-      '🌟 初出茅庐 - 完成第1关\n⭐ 小有成就 - 完成第10关\n🔥 连击高手 - 达成5连击\n🐰 萌宠好友 - 宠物升到5级',
-      [{ text: '太棒了！', color: 'primary', onClick: () => this._hideModal() }]
-    );
-  }
-
-  _showSettingsModal() {
-    this._showModal('⚙️ 游戏设置',
-      '🎵 背景音乐：开启\n🔊 音效：开启\n📳 震动反馈：开启',
-      [
-        { text: '💾 保存', color: 'primary', onClick: () => this._hideModal() },
-        { text: '取消', color: 'outline', onClick: () => this._hideModal() },
-      ]
-    );
-  }
-
-  _showAuthModal(mode = 'login') {
-    this._hideModal();
-    const overlay = document.createElement('div');
-    overlay.className = 'game-modal-overlay';
-    overlay.id = 'game-modal';
-
-    const modal = document.createElement('div');
-    modal.className = 'game-modal';
-    modal.style.width = '320px';
-
-    const h = document.createElement('div');
-    h.className = 'modal-title';
-    h.textContent = mode === 'login' ? '🔐 玩家登录' : '📝 玩家注册';
-
-    const form = document.createElement('div');
-    form.style.display = 'flex';
-    form.style.flexDirection = 'column';
-    form.style.gap = '10px';
-    form.style.margin = '14px 0';
-
-    const userIn = document.createElement('input');
-    userIn.type = 'text';
-    userIn.placeholder = '输入玩家名称 (4-12位)';
-    userIn.maxLength = 12;
-    userIn.style.padding = '8px 12px';
-    userIn.style.borderRadius = '10px';
-    userIn.style.border = '2px solid #ffb3d9';
-    userIn.style.fontFamily = 'inherit';
-    userIn.style.outline = 'none';
-
-    const passIn = document.createElement('input');
-    passIn.type = 'password';
-    passIn.placeholder = '输入密码 (6-18位)';
-    passIn.maxLength = 18;
-    passIn.style.padding = '8px 12px';
-    passIn.style.borderRadius = '10px';
-    passIn.style.border = '2px solid #ffb3d9';
-    passIn.style.fontFamily = 'inherit';
-    passIn.style.outline = 'none';
-
-    const errorMsg = document.createElement('div');
-    errorMsg.style.color = '#ff4757';
-    errorMsg.style.fontSize = '11px';
-    errorMsg.style.height = '14px';
-    errorMsg.style.fontWeight = 'bold';
-
-    form.appendChild(userIn);
-    form.appendChild(passIn);
-    form.appendChild(errorMsg);
-
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'modal-btn btn-primary';
-    submitBtn.textContent = mode === 'login' ? '🚀 登录并同步' : '🎁 注册并初始化';
-    submitBtn.style.width = '100%';
-    submitBtn.style.margin = '0 0 10px 0';
-
-    submitBtn.onclick = async () => {
-      const username = userIn.value.trim();
-      const password = passIn.value;
-
-      if (username.length < 3) {
-        errorMsg.textContent = '❌ 用户名至少需要3位';
-        return;
-      }
-      if (password.length < 6) {
-        errorMsg.textContent = '❌ 密码至少需要6位';
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = '⏳ 处理中...';
-
-      let res;
-      if (mode === 'login') {
-        res = await APIClient.login(username, password);
-      } else {
-        res = await APIClient.register(username, password);
-      }
-
-      if (res.success) {
-        SaveSystem.setCurrentUser(res.user.username);
-        SaveSystem.save(res.saveData);
-        this._hideModal();
-        this.scene.restart();
-      } else {
-        errorMsg.textContent = `❌ ${res.message || '操作失败'}`;
-        submitBtn.disabled = false;
-        submitBtn.textContent = mode === 'login' ? '🚀 登录并同步' : '🎁 注册并初始化';
-      }
-    };
-
-    const switchLink = document.createElement('a');
-    switchLink.href = '#';
-    switchLink.style.color = '#7950f2';
-    switchLink.style.fontSize = '12px';
-    switchLink.style.textDecoration = 'none';
-    switchLink.style.fontWeight = 'bold';
-    switchLink.textContent = mode === 'login' ? '还没有账号？点击注册' : '已有账号？点击登录';
-    switchLink.onclick = (e) => {
-      e.preventDefault();
-      this._showAuthModal(mode === 'login' ? 'register' : 'login');
-    };
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'modal-btn btn-outline';
-    closeBtn.textContent = '关闭';
-    closeBtn.style.width = '100%';
-    closeBtn.style.marginTop = '10px';
-    closeBtn.onclick = () => this._hideModal();
-
-    modal.appendChild(h);
-    modal.appendChild(form);
-    modal.appendChild(submitBtn);
-    modal.appendChild(switchLink);
-    modal.appendChild(closeBtn);
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
-  _showProfileModal() {
-    this._hideModal();
-    const user = SaveSystem.getCurrentUser();
-    const d = this.saveData;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'game-modal-overlay';
-    overlay.id = 'game-modal';
-
-    const modal = document.createElement('div');
-    modal.className = 'game-modal';
-    modal.style.width = '320px';
-
-    const h = document.createElement('div');
-    h.className = 'modal-title';
-    h.textContent = '🦊 玩家账号';
-
-    const info = document.createElement('div');
-    info.style.textAlign = 'left';
-    info.style.margin = '14px 0';
-    info.style.color = '#5a2d82';
-    info.style.fontSize = '13px';
-    info.style.lineHeight = '1.8';
-    info.innerHTML = `
-      <div style="font-weight: bold; border-bottom: 2px dashed #ffb3d9; padding-bottom: 6px; margin-bottom: 8px;">
-        当前账号: <span style="color: #ff6eb4;">${user}</span>
-      </div>
-      <div>✨ 关卡进度: 第 <b>${d.progress.maxLevel}</b> 关</div>
-      <div>🪙 金币余额: <b>${d.player.coins}</b></div>
-      <div>❤️ 剩余体力: <b>${d.player.hearts} / 5</b></div>
-    `;
-
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'modal-btn btn-primary';
-    settingsBtn.style.width = '100%';
-    settingsBtn.style.margin = '0 0 8px 0';
-    settingsBtn.textContent = '⚙️ 游戏设置';
-    settingsBtn.onclick = () => this._showSettingsModal();
-
-    const logoutBtn = document.createElement('button');
-    logoutBtn.className = 'modal-btn btn-secondary';
-    logoutBtn.style.width = '100%';
-    logoutBtn.style.margin = '0 0 8px 0';
-    logoutBtn.textContent = '🚪 退出登录';
-    logoutBtn.onclick = () => {
-      SaveSystem.setCurrentUser(null);
-      this._hideModal();
-      this.scene.restart();
-    };
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'modal-btn btn-outline';
-    closeBtn.textContent = '返回游戏';
-    closeBtn.style.width = '100%';
-    closeBtn.onclick = () => this._hideModal();
-
-    modal.appendChild(h);
-    modal.appendChild(info);
-    modal.appendChild(settingsBtn);
-    modal.appendChild(logoutBtn);
-    modal.appendChild(closeBtn);
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
-  async _showLeaderboardModal() {
-    this._hideModal();
-    const overlay = document.createElement('div');
-    overlay.className = 'game-modal-overlay';
-    overlay.id = 'game-modal';
-
-    const modal = document.createElement('div');
-    modal.className = 'game-modal';
-    modal.style.width = '330px';
-
-    const h = document.createElement('div');
-    h.className = 'modal-title';
-    h.textContent = '🏆 全球总分榜';
-
-    const listContainer = document.createElement('div');
-    listContainer.style.margin = '14px 0';
-    listContainer.style.maxHeight = '200px';
-    listContainer.style.overflowY = 'auto';
-    listContainer.style.textAlign = 'left';
-    listContainer.style.fontSize = '13px';
-    listContainer.textContent = '⏳ 排行榜加载中...';
-
-    const closeBtn = document.createElement('button');
-    closeBtn.className = 'modal-btn btn-outline';
-    closeBtn.textContent = '关闭';
-    closeBtn.style.width = '100%';
-    closeBtn.onclick = () => this._hideModal();
-
-    modal.appendChild(h);
-    modal.appendChild(listContainer);
-    modal.appendChild(closeBtn);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    const res = await APIClient.getGlobalLeaderboard();
-
-    if (res.success && res.leaderboard && res.leaderboard.length > 0) {
-      listContainer.innerHTML = '';
-      const table = document.createElement('table');
-      table.style.width = '100%';
-      table.style.borderCollapse = 'collapse';
-      table.style.color = '#5a2d82';
-
-      res.leaderboard.forEach((item, i) => {
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #fff0f8';
-        tr.style.height = '32px';
-
-        const rankEmoji = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`;
-        
-        tr.innerHTML = `
-          <td style="width: 30px; font-weight: bold; text-align: center; font-size: 14px;">${rankEmoji}</td>
-          <td style="font-weight: bold; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.username}</td>
-          <td style="text-align: right; color: #ff9f5a; padding-right: 6px;">通关:${item.maxLevel}</td>
-          <td style="text-align: right; font-weight: bold; color: #ff6eb4;">${item.totalScore.toLocaleString()}分</td>
-        `;
-        table.appendChild(tr);
-      });
-      listContainer.appendChild(table);
-    } else {
-      listContainer.textContent = '📭 暂无排行榜数据，快去通关创造纪录！';
-    }
-  }
-
-  _showModal(title, body, buttons) {
-    this._hideModal();
-    const overlay = document.createElement('div');
-    overlay.className = 'game-modal-overlay';
-    overlay.id = 'game-modal';
-
-    const modal = document.createElement('div');
-    modal.className = 'game-modal';
-
-    const h = document.createElement('div');
-    h.className = 'modal-title';
-    h.textContent = title;
-
-    const p = document.createElement('p');
-    p.className = 'modal-score';
-    p.textContent = body;
-
-    modal.appendChild(h);
-    modal.appendChild(p);
-
-    buttons.forEach(btn => {
-      const b = document.createElement('button');
-      b.className = `modal-btn btn-${btn.color}`;
-      b.textContent = btn.text;
-      b.onclick = btn.onClick;
-      modal.appendChild(b);
-    });
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
-  _hideModal() {
-    document.getElementById('game-modal')?.remove();
-  }
-
-  shutdown() { this._hideModal(); }
+  shutdown() { ModalSystem.hideModal(); }
 }

@@ -136,7 +136,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9000;  /* Phaser canvas 层 z-index 通常 < 100 */
   animation: overlayIn 0.28s ease;
 }
 
@@ -222,6 +222,24 @@ html, body {
   color: var(--text-dark);
   border: 2.5px solid var(--pink-light);
   box-shadow: 0 4px 12px rgba(255,110,180,0.15);
+}
+.btn-outline:hover { background: var(--pink-pale); }
+
+/* 登录/注册表单输入框 */
+.modal-input {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid #ffb3d9;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+.modal-input:focus {
+  border-color: #ff6eb4;
+  box-shadow: 0 0 0 3px rgba(255,110,180,0.18);
 }
 
 /* =============================================

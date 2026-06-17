@@ -71,43 +71,53 @@ export class GameScene extends Phaser.Scene {
   // ── 顶部三色胶囊 HUD ───────────────────────────
   _drawTopHUDBars() {
     const { width } = this.cameras.main;
+    const HUD_DEPTH = 50;
 
-    // 1. 左侧蓝色胶囊：步数显示 (x: 10, y: 12, w: 120, h: 42)
-    const barLeft = this.add.graphics();
+    // 动态计算三个胶囊的宽度（基于屏幕宽度）
+    const p1W = Math.floor(width * 0.285); // 步数胶囊
+    const p2W = Math.floor(width * 0.415); // 目标胶囊
+    const p3W = Math.floor(width * 0.265); // 星级胶囊
+    const hudH = 44;
+    const gap = 6;
+    const p1X = 8;
+    const p2X = p1X + p1W + gap;
+    const p3X = p2X + p2W + gap;
+
+    // 1. 左侧蓝色步数胶囊
+    const barLeft = this.add.graphics().setDepth(HUD_DEPTH);
     barLeft.fillStyle(0x448aff, 1);
-    barLeft.fillRoundedRect(10, 12, 120, 42, 21);
-    barLeft.lineStyle(3, 0xffffff, 1);
-    barLeft.strokeRoundedRect(10, 12, 120, 42, 21);
+    barLeft.fillRoundedRect(p1X, 10, p1W, hudH, 22);
+    barLeft.lineStyle(2.5, 0xffffff, 0.9);
+    barLeft.strokeRoundedRect(p1X, 10, p1W, hudH, 22);
 
-    this.add.text(32, 33, '🐾 步数:', {
-      fontSize: '13px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
-    }).setOrigin(0.5);
+    this.add.text(p1X + p1W * 0.32, 10 + hudH / 2, '🐾', {
+      fontSize: '14px',
+    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
 
-    this.movesText = this.add.text(95, 33, `${this.levelData.moves}`, {
+    this.movesText = this.add.text(p1X + p1W * 0.72, 10 + hudH / 2, `${this.levelData.moves}`, {
       fontSize: '22px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
 
-    // 2. 中间奶油色胶囊：当前消除目标 (x: 140, y: 12, w: 180, h: 42)
-    const barMid = this.add.graphics();
+    // 2. 中间奶油色目标胶囊
+    const barMid = this.add.graphics().setDepth(HUD_DEPTH);
     barMid.fillStyle(0xfff4f8, 1);
-    barMid.fillRoundedRect(140, 12, 180, 42, 21);
-    barMid.lineStyle(3, 0xffb3d9, 1);
-    barMid.strokeRoundedRect(140, 12, 180, 42, 21);
+    barMid.fillRoundedRect(p2X, 10, p2W, hudH, 22);
+    barMid.lineStyle(2.5, 0xffb3d9, 1);
+    barMid.strokeRoundedRect(p2X, 10, p2W, hudH, 22);
 
-    // 目标项显示
-    this.objGroup = this.add.container(140, 12);
+    this.objGroup = this.add.container(p2X, 10).setDepth(HUD_DEPTH + 1);
     this._updateObjectivesUI(this.levelData.objectives.map(o => ({ ...o, done: 0 })));
 
-    // 3. 右侧爱心胶囊：三星状态或剩余生命 (x: 330, y: 12, w: 110, h: 42)
-    const barRight = this.add.graphics();
+    // 3. 右侧星级胶囊
+    const barRight = this.add.graphics().setDepth(HUD_DEPTH);
     barRight.fillStyle(0xfff4f8, 1);
-    barRight.fillRoundedRect(330, 12, 110, 42, 21);
-    barRight.lineStyle(3, 0xffb3d9, 1);
-    barRight.strokeRoundedRect(330, 12, 110, 42, 21);
+    barRight.fillRoundedRect(p3X, 10, p3W, hudH, 22);
+    barRight.lineStyle(2.5, 0xffb3d9, 1);
+    barRight.strokeRoundedRect(p3X, 10, p3W, hudH, 22);
 
-    this.starsText = this.add.text(385, 33, '💗 💗 💗', {
-      fontSize: '15px',
-    }).setOrigin(0.5);
+    this.starsText = this.add.text(p3X + p3W / 2, 10 + hudH / 2, '💗 💗 💗', {
+      fontSize: '13px',
+    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
   }
 
   _updateObjectivesUI(objectives) {
@@ -264,47 +274,59 @@ export class GameScene extends Phaser.Scene {
   _drawBoosterBar() {
     const { width, height } = this.cameras.main;
     const boosters = Object.values(BOOSTER_TYPE);
+    const BOOSTER_DEPTH = 60;
 
-    // 道具栏底框宽度
-    const barW = boosters.length * 56 + 12;
-    const barX = 100; // 往右偏，防止覆盖左边招手的小兔
-    const barY = height - 76;
+    const itemSize = 48;
+    const itemGap = 10;
+    const barW = boosters.length * (itemSize + itemGap) + 16;
+    const barX = 90; // 右移防止遮挡小兔
+    const barH = 66;
+    const barY = height - barH - 10;
 
-    const barBg = this.add.graphics();
-    barBg.fillStyle(0xfffcf2, 0.95);
-    barBg.fillRoundedRect(barX, barY, barW, 56, 28);
+    const barBg = this.add.graphics().setDepth(BOOSTER_DEPTH);
+    barBg.fillStyle(0xfffcf2, 0.97);
+    barBg.fillRoundedRect(barX, barY, barW, barH, 33);
     barBg.lineStyle(2.5, 0xffb3d9, 1);
-    barBg.strokeRoundedRect(barX, barY, barW, 56, 28);
+    barBg.strokeRoundedRect(barX, barY, barW, barH, 33);
 
     boosters.forEach((booster, i) => {
-      const x = barX + 8 + i * 56 + 20;
-      const y = barY + 28;
+      const bx = barX + 8 + i * (itemSize + itemGap) + itemSize / 2;
+      const by = barY + barH / 2;
       const count = this.saveData.boosters[booster.id] || 0;
 
-      // 蓝圈小道具按钮
-      const btn = this.add.graphics();
-      btn.fillStyle(0x448aff, 1);
-      btn.fillCircle(x, y, 20);
-      btn.lineStyle(2, 0xffffff, 1);
-      btn.strokeCircle(x, y, 20);
+      // 蓝色圆形按钮
+      const btn = this.add.graphics().setDepth(BOOSTER_DEPTH + 1);
+      btn.fillStyle(count > 0 ? 0x448aff : 0xaaaaaa, 1);
+      btn.fillCircle(bx, by, itemSize / 2 - 2);
+      btn.lineStyle(2.5, 0xffffff, 0.9);
+      btn.strokeCircle(bx, by, itemSize / 2 - 2);
+      // 高光
+      btn.fillStyle(0xffffff, 0.18);
+      btn.fillEllipse(bx, by - 7, 22, 12);
 
-      this.add.text(x, y - 2, booster.emoji, { fontSize: '18px' }).setOrigin(0.5);
+      this.add.text(bx, by - 1, booster.emoji, { fontSize: '18px' })
+        .setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
 
       // 数量角标
       if (count > 0) {
-        const badge = this.add.graphics();
+        const badge = this.add.graphics().setDepth(BOOSTER_DEPTH + 2);
         badge.fillStyle(0xff4757, 1);
-        badge.fillCircle(x + 13, y + 13, 8);
-        this.add.text(x + 13, y + 13, `${count}`, {
+        badge.fillCircle(bx + 13, by + 12, 9);
+        this.add.text(bx + 13, by + 12, `${count}`, {
           fontSize: '9px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 3);
+      } else {
+        // 无库存时显示加号提示
+        this.add.text(bx, by + 14, '+购买', {
+          fontSize: '7px', fontFamily: 'Nunito', fill: '#ffffff',
+        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
       }
 
-      // 交互
-      const hit = this.add.circle(x, y, 22).setInteractive();
+      // 交互区（zone 防止层级问题）
+      const hit = this.add.zone(bx, by, itemSize, itemSize).setInteractive().setDepth(BOOSTER_DEPTH + 3);
       hit.on('pointerdown', () => this._useBooster(booster.id, count));
-      hit.on('pointerover', () => this.tweens.add({ targets: btn, scaleX: 1.1, scaleY: 1.1, duration: 100 }));
-      hit.on('pointerout', () => this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 100 }));
+      hit.on('pointerover', () => this.tweens.add({ targets: btn, scaleX: 1.12, scaleY: 1.12, duration: 80 }));
+      hit.on('pointerout', () => this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 }));
     });
   }
 
@@ -458,24 +480,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   _addWinButton(x, y, label, colorA, colorB, onClick) {
-    const w = 120, h = 42;
-    const bg = this.add.graphics();
+    const w = 126, h = 44;
+    const DEPTH = 500;
+    const bg = this.add.graphics().setDepth(DEPTH);
     bg.fillGradientStyle(colorA, colorB, colorA, colorB, 1);
     bg.fillRoundedRect(x - w/2, y - h/2, w, h, h/2);
     bg.fillStyle(0xffffff, 0.2);
     bg.fillEllipse(x, y - h/3, w * 0.6, h * 0.35);
-    bg.lineStyle(2, 0xffffff, 0.5);
+    bg.lineStyle(2.5, 0xffffff, 0.7);
     bg.strokeRoundedRect(x - w/2, y - h/2, w, h, h/2);
 
-    this.add.text(x, y, label, {
+    const txt = this.add.text(x, y, label, {
       fontSize: '13px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(DEPTH + 1);
 
-    const hit = this.add.rectangle(x, y, w, h).setInteractive();
+    // 使用 zone 确保不被遮挡
+    const hit = this.add.zone(x, y, w, h).setInteractive().setDepth(DEPTH + 2);
     hit.on('pointerdown', () => {
-      this.tweens.add({ targets: bg, scaleX: 0.93, scaleY: 0.93, duration: 80, yoyo: true });
+      this.tweens.add({ targets: [bg, txt], scaleX: 0.93, scaleY: 0.93, duration: 80, yoyo: true });
       onClick();
     });
+    hit.on('pointerover', () =>
+      this.tweens.add({ targets: [bg, txt], scaleX: 1.04, scaleY: 1.04, duration: 80 })
+    );
+    hit.on('pointerout', () =>
+      this.tweens.add({ targets: [bg, txt], scaleX: 1, scaleY: 1, duration: 80 })
+    );
   }
 
   _launchFireworks() {

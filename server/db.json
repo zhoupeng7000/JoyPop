@@ -1,4 +1,57 @@
 {
-  "users": [],
+  "users": [
+    {
+      "username": "testuser2",
+      "salt": "34875bd610fc9342dde2e13abaf8fffd",
+      "passwordHash": "dbfdc5be87126f1998e5e541179c525967b32df6ad2fc2d07e4ce8c2dd9893a9",
+      "saveData": {
+        "version": "1.0.0",
+        "player": {
+          "name": "testuser2",
+          "level": 1,
+          "exp": 0,
+          "hearts": 5,
+          "lastHeartTime": 1781710551494,
+          "coins": 160,
+          "gems": 5
+        },
+        "progress": {
+          "currentLevel": 1,
+          "maxLevel": 1,
+          "levelStars": {},
+          "levelScores": {}
+        },
+        "pet": {
+          "name": "消消",
+          "level": 1,
+          "exp": 0,
+          "hunger": 80,
+          "clean": 90,
+          "mood": 85,
+          "lastUpdateTime": 1781710551494,
+          "skin": "default",
+          "accessories": []
+        },
+        "boosters": {
+          "hammer": 3,
+          "shuffle": 2,
+          "extra": 3,
+          "rainbow": 1,
+          "pet": 2
+        },
+        "dailyReward": {
+          "lastClaimDate": "Thu Jun 18 2026",
+          "streak": 2
+        },
+        "achievements": [],
+        "settings": {
+          "bgmVolume": 0.6,
+          "sfxVolume": 0.8,
+          "vibration": true
+        }
+      },
+      "createdAt": 1781710551494
+    }
+  ],
   "scores": []
 }
