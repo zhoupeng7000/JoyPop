@@ -1,48 +1,47 @@
-# 1. 工作流的名称
-name: Deploy to Server
+name: 🚀 Deploy JoyPop
 
-# 2. 触发条件：当代码被推送到 main 分支时触发
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
-# 3. 工作任务（jobs）
 jobs:
   deploy:
-    # 运行环境：使用 GitHub 提供的 Ubuntu 虚拟机
     runs-on: ubuntu-latest
-    
-    # 步骤（steps）
     steps:
-      # 步骤1：拉取你的代码
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      # 步骤2：设置 Node.js 环境
-      - name: Setup Node.js
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 20
+          cache: 'npm'
 
-      # 步骤3：安装项目依赖
-      - name: Install dependencies
-        run: npm install
+      - name: 🏗️ Build Frontend
+        run: |
+          npm ci
+          npm run build
 
-      # 步骤4：构建项目（如果项目需要构建，如 React/Vue）
-      - name: Build project
-        run: npm run build
-
-      # 步骤5：纯命令部署（需要你的服务器自己拉取，或者通过命令处理）
-      - name: Deploy to Server
-        uses: easingthemes/ssh-deploy@main
+      - name: 📂 Transfer files to Server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
-          REMOTE_USER: ${{ secrets.SERVER_USER }}
-          SOURCE: "dist/"
-          TARGET: "/var/www/JoyPop/"
-          ARGS: "-rlgoDzvO --delete" # --delete 相当于你想要的 rm: true (清空旧文件)
-          # 传输完成后，顺便执行 PM2 重启命令
-          SCRIPT: |
-            pm2 restart JoyPop || pm2 start npm --name "JoyPop" -- run start
-     
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "dist/,server/,package.json,package-lock.json"
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: 🚀 Start/Restart PM2 Service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/JoyPop
+            npm ci --omit=dev
+            pm2 reload joypop-server --update-env || pm2 start server/server.js --name joypop-server --time
+            pm2 save
+            pm2 status joypop-server
