@@ -33,12 +33,4 @@ jobs:
         run: npm run build
 
       # 步骤5：部署到你的云服务器（核心！）
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}        # 服务器 IP
-          username: ${{ secrets.SERVER_USER }}    # 服务器用户名
-          key: ${{ secrets.SERVER_SSH_KEY }}      # 服务器的 SSH 私钥
-          source: "dist/"
-          target: "/var/www/JoyPop/"
-          rm: true # 先清空服务端旧dist文件
+     
