@@ -39,8 +39,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}        # 服务器 IP
           username: ${{ secrets.SERVER_USER }}    # 服务器用户名
           key: ${{ secrets.SERVER_SSH_KEY }}      # 服务器的 SSH 私钥
-          script: |
-            cd /var/www/JoyPop
-            git pull
-            npm install
-            pm2 restart JoyPop
+          source: "dist/"
+          target: "/var/www/JoyPop/"
+          rm: true # 先清空服务端旧dist文件
+          pm2: restart JoyPop
