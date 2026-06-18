@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       # 步骤3：安装项目依赖
       - name: Install dependencies
@@ -32,5 +32,4 @@ jobs:
       - name: Build project
         run: npm run build
 
-      # 步骤5：部署到你的云服务器（核心！）
      
