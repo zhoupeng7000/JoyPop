@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '18'
 
       # 步骤3：安装项目依赖
       - name: Install dependencies
@@ -42,4 +42,3 @@ jobs:
           source: "dist/"
           target: "/var/www/JoyPop/"
           rm: true # 先清空服务端旧dist文件
-          pm2: restart JoyPop
