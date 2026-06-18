@@ -34,17 +34,15 @@ jobs:
 
       # 步骤5：纯命令部署（需要你的服务器自己拉取，或者通过命令处理）
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: easingthemes/ssh-deploy@main
         with:
-          host: ${{ secrets.SERVER_HOST }}        # 服务器 IP
-          username: ${{ secrets.SERVER_USER }}    # 服务器用户名
-          key: ${{ secrets.SERVER_SSH_KEY }}      # 服务器的 SSH 私钥
-          script: |
-            cd /var/www/JoyPop
-            # 因为这个插件不能直接帮你传 dist，你必须通过服务器自己去 git pull
-            git fetch --all
-            git reset --hard origin/main
-            npm install
-            npm run build
+          SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.SERVER_HOST }}
+          REMOTE_USER: ${{ secrets.SERVER_USER }}
+          SOURCE: "dist/"
+          TARGET: "/var/www/JoyPop/"
+          ARGS: "-rlgoDzvO --delete" # --delete 相当于你想要的 rm: true (清空旧文件)
+          # 传输完成后，顺便执行 PM2 重启命令
+          SCRIPT: |
             pm2 restart JoyPop || pm2 start npm --name "JoyPop" -- run start
      
