@@ -31,7 +31,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: "dist/,server/,package.json,package-lock.json"
-          target: ${{ secrets.DEPLOY_PATH }}
+          target: /var/www/JoyPop
 
       - name: 🚀 Start/Restart PM2 Service
         uses: appleboy/ssh-action@v1.0.3
