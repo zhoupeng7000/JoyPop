@@ -22,7 +22,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # 步骤3：安装项目依赖
       - name: Install dependencies
@@ -32,4 +32,19 @@ jobs:
       - name: Build project
         run: npm run build
 
+      # 步骤5：纯命令部署（需要你的服务器自己拉取，或者通过命令处理）
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}        # 服务器 IP
+          username: ${{ secrets.SERVER_USER }}    # 服务器用户名
+          key: ${{ secrets.SERVER_SSH_KEY }}      # 服务器的 SSH 私钥
+          script: |
+            cd /var/www/JoyPop
+            # 因为这个插件不能直接帮你传 dist，你必须通过服务器自己去 git pull
+            git fetch --all
+            git reset --hard origin/main
+            npm install
+            npm run build
+            pm2 restart JoyPop || pm2 start npm --name "JoyPop" -- run start
      
