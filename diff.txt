@@ -1,0 +1,2886 @@
+﻿diff --git a/public/assets/ui/gameplay_ui_bg.png b/public/assets/ui/gameplay_ui_bg.png
+index f701c0e..7f8e4a7 100644
+Binary files a/public/assets/ui/gameplay_ui_bg.png and b/public/assets/ui/gameplay_ui_bg.png differ
+diff --git a/public/assets/ui/main_menu_bg.png b/public/assets/ui/main_menu_bg.png
+index f98f76f..bd6fd9a 100644
+Binary files a/public/assets/ui/main_menu_bg.png and b/public/assets/ui/main_menu_bg.png differ
+diff --git a/public/assets/ui/pet_ui_bg.png b/public/assets/ui/pet_ui_bg.png
+index ebbe97e..cf85ad1 100644
+Binary files a/public/assets/ui/pet_ui_bg.png and b/public/assets/ui/pet_ui_bg.png differ
+diff --git a/server/db.json b/server/db.json
+index 675547e..e7f68fd 100644
+--- a/server/db.json
++++ b/server/db.json
+@@ -10,9 +10,9 @@
+           "name": "testuser2",
+           "level": 1,
+           "exp": 0,
+-          "hearts": 5,
+-          "lastHeartTime": 1781710551494,
+-          "coins": 160,
++          "hearts": 3,
++          "lastHeartTime": 1781874079809,
++          "coins": 220,
+           "gems": 5
+         },
+         "progress": {
+@@ -40,8 +40,8 @@
+           "pet": 2
+         },
+         "dailyReward": {
+-          "lastClaimDate": "Thu Jun 18 2026",
+-          "streak": 2
++          "lastClaimDate": "Fri Jun 19 2026",
++          "streak": 3
+         },
+         "achievements": [],
+         "settings": {
+diff --git a/src/scenes/BootScene.js b/src/scenes/BootScene.js
+index 5c20e91..824bb23 100644
+--- a/src/scenes/BootScene.js
++++ b/src/scenes/BootScene.js
+@@ -18,10 +18,23 @@ export class BootScene extends Phaser.Scene {
+ 
+     // 杞藉叆閲嶆瀯鍚庣殑 UI 鍥剧墖璧勬簮
+     this.load.image('main_menu_bg', 'assets/ui/main_menu_bg.png');
++    this.load.image('level_map_ch1', 'assets/ui/level_map_ch1.png');
++    this.load.image('level_map_ch2', 'assets/ui/level_map_ch2.png');
+     this.load.image('level_map_full', 'assets/ui/level_map_full.png');
+     this.load.image('gameplay_ui_bg', 'assets/ui/gameplay_ui_bg.png');
+     this.load.image('pet_ui_bg', 'assets/ui/pet_ui_bg.png');
+     this.load.image('bunny', 'assets/characters/bunny.png');
++
++    // 杞藉叆楂樹繚鐪?Q 钀?3D 姘存灉/瀹濈煶妫嬪瓙 PNG 璧勬簮
++    this.load.image('tile_strawberry', 'assets/tiles/tile_strawberry.png');
++    this.load.image('tile_grape', 'assets/tiles/tile_grape.png');
++    this.load.image('tile_orange', 'assets/tiles/tile_orange.png');
++    this.load.image('tile_blueberry', 'assets/tiles/tile_blueberry.png');
++    this.load.image('tile_watermelon', 'assets/tiles/tile_watermelon.png');
++    this.load.image('tile_cherry', 'assets/tiles/tile_cherry.png');
++    this.load.image('tile_diamond', 'assets/tiles/tile_diamond.png');
++    this.load.image('tile_crystal', 'assets/tiles/tile_crystal.png');
++    this.load.image('ui_heart', 'assets/ui/ui_heart.png');
+   }
+ 
+   create() {
+@@ -29,6 +42,7 @@ export class BootScene extends Phaser.Scene {
+       this._createTileTextures();
+       this._createUITextures();
+       this._createCharacterTextures();
++      this._createProceduralIcons();
+     } catch (e) {
+       console.error('[BootScene] 绾圭悊鍒涘缓澶辫触:', e);
+     }
+@@ -71,28 +85,37 @@ export class BootScene extends Phaser.Scene {
+     g.fillPoints([{ x: x1, y: y1 }, { x: x2, y: y2 }, { x: x3, y: y3 }], true);
+   }
+ 
+-  // 鈹€鈹€ 绾圭悊锛氭柟鍧?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++  // 鈹€鈹€ 绾圭悊锛氭柟鍧楋紙绯栨灉姘存灉椋庢牸锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _createTileTextures() {
++    const size = 56;
+     const tileData = [
+-      { key: 'tile_0', color: 0xff4757 },
+-      { key: 'tile_1', color: 0x9c27b0 },
+-      { key: 'tile_2', color: 0xff9800 },
+-      { key: 'tile_3', color: 0x3f88c5 },
+-      { key: 'tile_4', color: 0x4caf50 },
+-      { key: 'tile_5', color: 0xe91e63 },
+-      { key: 'tile_6', color: 0x00bcd4 },
+-      { key: 'tile_7', color: 0x7c4dff },
++      { key: 'tile_0', color: 0xff4757, accent: 0xff6b81 },   // 绾㈣壊鑽夎帗
++      { key: 'tile_1', color: 0x9c27b0, accent: 0xce93d8 },   // 绱壊钁¤悇
++      { key: 'tile_2', color: 0xff9800, accent: 0xffb74d },   // 姗欒壊姗樺瓙
++      { key: 'tile_3', color: 0x3f88c5, accent: 0x74c0fc },   // 钃濊壊钃濊帗
++      { key: 'tile_4', color: 0x4caf50, accent: 0x81c784 },   // 缁胯壊鑻规灉
++      { key: 'tile_5', color: 0xe91e63, accent: 0xf48fb1 },   // 绮夎壊妯辨
++      { key: 'tile_6', color: 0x00bcd4, accent: 0x4dd0e1 },   // 闈掕壊钖勮嵎
++      { key: 'tile_7', color: 0x7c4dff, accent: 0xb388ff },   // 闈涚传鏄熸槦
+     ];
+ 
+-    tileData.forEach(({ key, color }) => {
++    tileData.forEach(({ key, color, accent }) => {
+       const g = this.add.graphics();
+-      const size = 56;
++      // 涓讳綋鍦嗚鑹插潡
+       g.fillStyle(color, 1);
+-      g.fillRoundedRect(3, 3, size - 6, size - 6, 14);
++      g.fillRoundedRect(2, 2, size - 4, size - 4, 14);
++      // 鍐呭祵浜壊鍖哄煙
++      g.fillStyle(accent, 1);
++      g.fillRoundedRect(5, 5, size - 10, size - 10, 12);
++      // 绔嬩綋杈规
++      g.lineStyle(2.5, color, 0.9);
++      g.strokeRoundedRect(2, 2, size - 4, size - 4, 14);
++      // 椤堕儴楂樺厜寮?+      g.fillStyle(0xffffff, 0.4);
++      g.fillEllipse(size / 2, size / 3.5, size * 0.55, size * 0.28);
++      // 鍙充笅瑙掑皬楂樺厜鐐?       g.fillStyle(0xffffff, 0.3);
+-      g.fillEllipse(size / 3, size / 4, size / 2.5, size / 3.5);
+-      g.lineStyle(3, 0xffffff, 0.9);
+-      g.strokeRoundedRect(3, 3, size - 6, size - 6, 14);
++      g.fillCircle(size * 0.7, size * 0.7, 4);
+       g.generateTexture(key, size, size);
+       g.destroy();
+     });
+@@ -100,95 +123,600 @@ export class BootScene extends Phaser.Scene {
+ 
+   // 鈹€鈹€ 绾圭悊锛歎I 鍏冪礌 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _createUITextures() {
+-    // 绮夎壊鎸夐挳
++    // 妫灄钀岀矇澶ф寜閽?- 3D 娓愬彉甯﹂珮鍏?     const btn = this.add.graphics();
++    // 闃村奖搴?+    btn.fillStyle(0xd63031, 0.3);
++    btn.fillRoundedRect(3, 4, 200, 60, 30);
++    // 娓愬彉鏈綋
+     btn.fillStyle(0xff6eb4, 1);
+     btn.fillRoundedRect(0, 0, 200, 60, 30);
+-    btn.fillStyle(0xffffff, 0.22);
+-    btn.fillEllipse(70, 18, 120, 25);
+-    btn.lineStyle(3, 0xffffff, 0.6);
++    // 鍐呯疆鏉＄汗/楂樺厜寮?+    btn.fillStyle(0xffffff, 0.28);
++    btn.fillEllipse(100, 15, 140, 20);
++    btn.lineStyle(3, 0xffffff, 0.85);
+     btn.strokeRoundedRect(0, 0, 200, 60, 30);
+     btn.generateTexture('btn_pink', 200, 60);
+     btn.destroy();
+ 
+-    // 閲戣壊鏄熸槦锛堢敤 fillPoints 缁樺埗浜旇鏄燂級
++    // 绔嬩綋閲戣壊鏄熸槦
+     const star = this.add.graphics();
+-    star.fillStyle(0xffd43b, 1);
++    // 鏆楃孩鎻忚竟涓庨槾褰?+    star.fillStyle(0xeccc68, 0.35);
++    this._fillStar(star, 32, 32, 5, 14, 30);
++    // 娓愬彉閲戦粍
++    star.fillStyle(0xffd23f, 1);
+     this._fillStar(star, 30, 30, 5, 12, 28);
+-    star.lineStyle(2, 0xff9800, 1);
++    // 姗欓粍鑹茬珛浣撹竟妗?+    star.lineStyle(2.5, 0xffa502, 1);
+     this._strokeStar(star, 30, 30, 5, 12, 28);
++    // 鐧借壊鏈堢墮楂樺厜
++    star.fillStyle(0xffffff, 0.5);
++    star.fillCircle(24, 24, 5);
+     star.generateTexture('star_gold', 60, 60);
+     star.destroy();
+ 
+-    // 鐏拌壊鏄熸槦
++    // 绔嬩綋鐏拌壊鏄熸槦
+     const starGray = this.add.graphics();
+-    starGray.fillStyle(0xcccccc, 1);
++    starGray.fillStyle(0xdddddd, 1);
+     this._fillStar(starGray, 30, 30, 5, 12, 28);
++    starGray.lineStyle(2.5, 0xa4b0be, 1);
++    this._strokeStar(starGray, 30, 30, 5, 12, 28);
+     starGray.generateTexture('star_gray', 60, 60);
+     starGray.destroy();
+ 
+-    // 蹇冨舰锛堢敤鍦?涓夎杩戜技锛?+    // 缁忓吀绔嬩綋绾㈠績 (鐢ㄤ簬缂虹渷澶囩敤)
+     const heart = this.add.graphics();
+     heart.fillStyle(0xff4757, 1);
+     heart.fillCircle(15, 18, 13);
+     heart.fillCircle(29, 18, 13);
+-    // 鐢?fillPoints 浠ｆ浛 fillTriangle
+     this._fillTriangle(heart, 2, 24, 42, 24, 22, 46);
++    // 楂樺厜鍦嗙偣
++    heart.fillStyle(0xffffff, 0.45);
++    heart.fillCircle(13, 13, 4);
+     heart.generateTexture('heart_full', 44, 48);
+     heart.destroy();
+ 
+-    // 鐧借壊闈㈡澘
++    // 妫灄鑺辨濂舵补鐧介潰鏉?     const panel = this.add.graphics();
+-    panel.fillStyle(0xffffff, 0.95);
++    // 鏌斿拰濂舵补绫抽粍鑹茶儗鏅?+    panel.fillStyle(0xfffdf9, 0.98);
+     panel.fillRoundedRect(0, 0, 300, 400, 24);
+-    panel.lineStyle(3, 0xff6eb4, 0.5);
++    // 绮剧編鐨勬湪绮夎壊杈规
++    panel.lineStyle(4, 0xffb3d9, 1);
+     panel.strokeRoundedRect(0, 0, 300, 400, 24);
++    // 鍐呴儴缁嗚櫄绾胯楗?+    panel.lineStyle(1.5, 0xffd3e8, 0.7);
++    panel.strokeRoundedRect(8, 8, 284, 384, 18);
+     panel.generateTexture('panel_white', 300, 400);
+     panel.destroy();
+   }
+ 
+-  // 鈹€鈹€ 绾圭悊锛氬皬鍏旇鑹?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++  // 鈹€鈹€ 绾圭悊锛氬皬鍏旇鑹诧紙澶у昂瀵搁珮绮剧粏鐗堬級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _createCharacterTextures() {
+     const bunny = this.add.graphics();
++    const W = 160, H = 176;
+ 
+-    // 韬綋锛堢櫧鑹诧級
++    // 韬綋锛堢櫧鑹叉き鍦嗭級
+     bunny.fillStyle(0xffffff, 1);
+-    bunny.fillCircle(40, 58, 26);
++    bunny.fillEllipse(80, 120, 60, 50);
++
+     // 澶?-    bunny.fillCircle(40, 30, 22);
+-    // 鑰虫湹澶栧眰
++    bunny.fillCircle(80, 62, 44);
++
++    // 鑰虫湹澶栧眰锛堢矇鐧芥笎鍙樻晥鏋滐級
+     bunny.fillStyle(0xffd6e7, 1);
+-    bunny.fillEllipse(27, 10, 12, 28);
+-    bunny.fillEllipse(53, 10, 12, 28);
++    bunny.fillEllipse(52, 18, 22, 54);
++    bunny.fillEllipse(108, 18, 22, 54);
+     // 鑰虫湹鍐呭眰
+     bunny.fillStyle(0xffb3c6, 1);
+-    bunny.fillEllipse(27, 10, 7, 20);
+-    bunny.fillEllipse(53, 10, 7, 20);
+-    // 鐪肩潧
++    bunny.fillEllipse(52, 18, 13, 40);
++    bunny.fillEllipse(108, 18, 13, 40);
++
++    // 鐪肩潧锛堝ぇ鐪艰悓锛?     bunny.fillStyle(0x2c2c54, 1);
+-    bunny.fillCircle(33, 27, 5);
+-    bunny.fillCircle(47, 27, 5);
+-    // 鐪肩潧楂樺厜
++    bunny.fillCircle(64, 56, 10);
++    bunny.fillCircle(96, 56, 10);
++    // 鐪肩潧楂樺厜锛堝弻楂樺厜鏇磋悓锛?     bunny.fillStyle(0xffffff, 1);
+-    bunny.fillCircle(35, 25, 2);
+-    bunny.fillCircle(49, 25, 2);
+-    // 鑵孩
+-    bunny.fillStyle(0xffb3c6, 0.7);
+-    bunny.fillCircle(26, 33, 7);
+-    bunny.fillCircle(54, 33, 7);
++    bunny.fillCircle(68, 52, 4);
++    bunny.fillCircle(100, 52, 4);
++    bunny.fillCircle(62, 60, 2);
++    bunny.fillCircle(94, 60, 2);
++
++    // 鑵孩锛堢埍蹇冨舰鐘讹級
++    bunny.fillStyle(0xffb3c6, 0.6);
++    bunny.fillCircle(48, 70, 12);
++    bunny.fillCircle(112, 70, 12);
++
+     // 榧诲瓙
+     bunny.fillStyle(0xff6b81, 1);
+-    bunny.fillCircle(40, 35, 3);
+-    // 甯藉瓙娌?+    bunny.fillCircle(80, 72, 5);
++
++    // 鍢村反寰瑧寮?+    bunny.lineStyle(2.5, 0xffb3c6, 0.9);
++    bunny.beginPath();
++    bunny.arc(80, 72, 8, Math.PI * 0.15, Math.PI * 0.85);
++    bunny.strokePath();
++
++    // 甯藉瓙/澶撮グ - 绮夎壊铦磋澏缁?     bunny.fillStyle(0xff6eb4, 1);
+-    bunny.fillRoundedRect(26, 8, 28, 6, 3);
+-    // 甯借韩
+-    bunny.fillRoundedRect(30, 0, 20, 10, 4);
+-    // 甯藉瓙瑁呴グ
++    bunny.fillEllipse(110, 30, 14, 10);
++    bunny.fillEllipse(126, 30, 14, 10);
++    bunny.fillCircle(118, 30, 5);
++    // 铦磋澏缁撲腑蹇冭楗?     bunny.fillStyle(0xffd43b, 1);
+-    bunny.fillCircle(40, 4, 4);
++    bunny.fillCircle(118, 30, 3);
++
++    // 灏忚倸鐨?+    bunny.fillStyle(0xfff0f5, 1);
++    bunny.fillEllipse(80, 128, 30, 24);
++
++    // 灏忚剼
++    bunny.fillStyle(0xffd6e7, 1);
++    bunny.fillEllipse(62, 155, 18, 10);
++    bunny.fillEllipse(98, 155, 18, 10);
++
++    // 灏忔墜 (鎸ユ墜濮挎€?
++    bunny.fillStyle(0xffffff, 1);
++    bunny.fillCircle(42, 108, 10);
++    bunny.fillCircle(118, 100, 10);
+ 
+-    bunny.generateTexture('bunny_happy', 80, 88);
++    bunny.generateTexture('bunny_happy', W, H);
+     bunny.destroy();
+   }
++
++  // 鈹€鈹€ 绾圭悊锛歈鐗堝崱閫氱煝閲忓浘鏍囷紙澶у昂瀵搞€侀珮瀵规瘮銆佹竻鏅板彲杈級鈹€鈹€鈹€鈹€
++  _createProceduralIcons() {
++    const S = 100; // 缁熶竴 100x100 鐢诲竷锛屼繚璇佺缉鏀惧悗渚濈劧娓呮櫚
++
++    // 鈹€鈹€鈹€ 1. 鐙愮嫺澶村儚 ui_avatar_fox 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const fox = this.add.graphics();
++    // 鍦嗗簳
++    fox.fillStyle(0xfff0e6, 1);
++    fox.fillCircle(50, 52, 42);
++    // 宸﹁€?+    fox.fillStyle(0xff7043, 1);
++    this._fillTriangle(fox, 14, 36, 28, 6, 36, 40);
++    fox.fillStyle(0xffd2a1, 1);
++    this._fillTriangle(fox, 18, 32, 27, 12, 33, 37);
++    // 鍙宠€?+    fox.fillStyle(0xff7043, 1);
++    this._fillTriangle(fox, 86, 36, 72, 6, 64, 40);
++    fox.fillStyle(0xffd2a1, 1);
++    this._fillTriangle(fox, 82, 32, 73, 12, 67, 37);
++    // 鑴告湰浣?+    fox.fillStyle(0xff6348, 1);
++    fox.fillEllipse(50, 56, 40, 32);
++    // 鐧介潰棰?+    fox.fillStyle(0xffffff, 1);
++    fox.fillEllipse(30, 68, 18, 14);
++    fox.fillEllipse(70, 68, 18, 14);
++    // 鐪肩潧
++    fox.fillStyle(0x2f3542, 1);
++    fox.fillCircle(36, 52, 5);
++    fox.fillCircle(64, 52, 5);
++    fox.fillStyle(0xffffff, 1);
++    fox.fillCircle(34, 50, 2);
++    fox.fillCircle(62, 50, 2);
++    // 榧诲瓙
++    fox.fillStyle(0x2f3542, 1);
++    this._fillTriangle(fox, 44, 66, 56, 66, 50, 72);
++    // 鑵孩
++    fox.fillStyle(0xffb3c6, 0.5);
++    fox.fillCircle(26, 62, 6);
++    fox.fillCircle(74, 62, 6);
++    fox.generateTexture('ui_avatar_fox', S, S);
++    fox.destroy();
++
++    // 鈹€鈹€鈹€ 2. 閲戝竵 ui_coin 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const coin = this.add.graphics();
++    coin.fillStyle(0xffd700, 1);
++    coin.fillCircle(50, 50, 42);
++    coin.lineStyle(5, 0xffa500, 1);
++    coin.strokeCircle(50, 50, 42);
++    coin.fillStyle(0xffe66d, 1);
++    coin.fillCircle(50, 50, 28);
++    coin.lineStyle(3, 0xffa500, 1);
++    coin.strokeCircle(50, 50, 28);
++    coin.fillStyle(0xffa500, 1);
++    this._fillStar(coin, 50, 50, 5, 8, 18);
++    coin.fillStyle(0xffffff, 0.5);
++    coin.fillCircle(36, 36, 7);
++    coin.generateTexture('ui_coin', S, S);
++    coin.destroy();
++
++    // 鈹€鈹€鈹€ 3. 閿?ui_lock 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const lock = this.add.graphics();
++    // 閿佺幆
++    lock.lineStyle(8, 0xa4b0be, 1);
++    lock.strokeRoundedRect(26, 10, 48, 44, 22);
++    // 閿佷綋
++    lock.fillStyle(0xd2893c, 1);
++    lock.fillRoundedRect(16, 40, 68, 44, 10);
++    lock.lineStyle(4, 0x8f531d, 1);
++    lock.strokeRoundedRect(16, 40, 68, 44, 10);
++    // 閽ュ寵瀛?+    lock.fillStyle(0x2f3542, 1);
++    lock.fillCircle(50, 56, 6);
++    this._fillTriangle(lock, 46, 58, 54, 58, 50, 74);
++    lock.generateTexture('ui_lock', S, S);
++    lock.destroy();
++
++    // 鈹€鈹€鈹€ 4. 杩斿洖绠ご ui_arrow_back 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const back = this.add.graphics();
++    back.fillStyle(0x7950f2, 1);
++    back.fillCircle(50, 50, 44);
++    back.lineStyle(4, 0xffffff, 0.9);
++    back.strokeCircle(50, 50, 44);
++    // 绮楃澶?+    back.fillStyle(0xffffff, 1);
++    this._fillTriangle(back, 22, 50, 46, 28, 46, 72);
++    back.fillRect(40, 40, 28, 20);
++    back.generateTexture('ui_arrow_back', S, S);
++    back.destroy();
++
++    // 鈹€鈹€鈹€ 5. 姝ユ暟鍥炬爣 ui_icon_moves 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const paw = this.add.graphics();
++    paw.fillStyle(0x448aff, 1);
++    paw.fillCircle(50, 50, 44);
++    paw.lineStyle(4, 0xffffff, 0.9);
++    paw.strokeCircle(50, 50, 44);
++    // 澶х埅鎺?+    paw.fillStyle(0xffffff, 1);
++    paw.fillEllipse(50, 60, 22, 16);
++    // 鍥涗釜瓒?+    paw.fillCircle(30, 42, 7);
++    paw.fillCircle(42, 32, 7);
++    paw.fillCircle(58, 32, 7);
++    paw.fillCircle(70, 42, 7);
++    paw.generateTexture('ui_icon_moves', S, S);
++    paw.destroy();
++
++    // 鈹€鈹€鈹€ 6. 閿ゅ瓙閬撳叿 ui_booster_hammer 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const ham = this.add.graphics();
++    // 鎵嬫焺
++    ham.fillStyle(0x8d6e46, 1);
++    ham.fillRect(42, 52, 16, 40);
++    ham.fillStyle(0xa67c52, 1);
++    ham.fillRect(44, 52, 12, 40);
++    // 閿ゅご
++    ham.fillStyle(0xbdc3c7, 1);
++    ham.fillRoundedRect(22, 16, 56, 38, 8);
++    ham.lineStyle(4, 0x95a5a6, 1);
++    ham.strokeRoundedRect(22, 16, 56, 38, 8);
++    // 楂樺厜
++    ham.fillStyle(0xffffff, 0.35);
++    ham.fillEllipse(50, 28, 34, 12);
++    ham.generateTexture('ui_booster_hammer', S, S);
++    ham.destroy();
++
++    // 鈹€鈹€鈹€ 7. 閲嶆帓閬撳叿 ui_booster_shuffle 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const shuf = this.add.graphics();
++    // 涓ゆ潯浜ゅ弶鏇茬嚎
++    shuf.lineStyle(8, 0x2ed573, 1);
++    shuf.beginPath();
++    shuf.moveTo(18, 30);
++    shuf.lineTo(42, 50);
++    shuf.lineTo(82, 30);
++    shuf.strokePath();
++    shuf.beginPath();
++    shuf.moveTo(18, 70);
++    shuf.lineTo(58, 50);
++    shuf.lineTo(82, 70);
++    shuf.strokePath();
++    // 绠ご
++    shuf.fillStyle(0x2ed573, 1);
++    this._fillTriangle(shuf, 82, 30, 68, 22, 68, 38);
++    this._fillTriangle(shuf, 82, 70, 68, 62, 68, 78);
++    shuf.generateTexture('ui_booster_shuffle', S, S);
++    shuf.destroy();
++
++    // 鈹€鈹€鈹€ 8. 鍔犳閬撳叿 ui_booster_extra 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const extra = this.add.graphics();
++    // 绮夎壊闂归挓搴?+    extra.fillStyle(0xff6eb4, 1);
++    extra.fillCircle(50, 52, 36);
++    extra.lineStyle(4, 0xffffff, 1);
++    extra.strokeCircle(50, 52, 36);
++    // 閾冮摏鑰?+    extra.fillCircle(22, 22, 10);
++    extra.fillCircle(78, 22, 10);
++    // 鐧借壊琛ㄧ洏
++    extra.fillStyle(0xffffff, 1);
++    extra.fillCircle(50, 52, 26);
++    // 鎸囬拡
++    extra.lineStyle(5, 0xff6eb4, 1);
++    extra.lineBetween(50, 52, 50, 34);
++    extra.lineBetween(50, 52, 64, 52);
++    // +5 鏂囧瓧鏍囪瘑锛堢敤鍥惧舰杩戜技锛?+    extra.fillStyle(0x2ed573, 1);
++    extra.fillRect(46, 70, 8, 3);
++    extra.fillRect(48, 67, 4, 9);
++    extra.generateTexture('ui_booster_extra', S, S);
++    extra.destroy();
++
++    // 鈹€鈹€鈹€ 9. 褰╄櫣娑堥櫎 ui_booster_rainbow 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const rb = this.add.graphics();
++    const rbColors = [0xff4757, 0xff9800, 0xffd43b, 0x4caf50, 0x3f88c5, 0x9c27b0];
++    for (let i = 0; i < 6; i++) {
++      rb.fillStyle(rbColors[i], 1);
++      rb.fillCircle(50, 50, 44 - i * 7);
++    }
++    // 鐧借壊鏄熸槦涓績
++    rb.fillStyle(0xffffff, 0.85);
++    this._fillStar(rb, 50, 50, 5, 6, 14);
++    // 楂樺厜
++    rb.fillStyle(0xffffff, 0.4);
++    rb.fillCircle(36, 36, 8);
++    rb.generateTexture('ui_booster_rainbow', S, S);
++    rb.destroy();
++
++    // 鈹€鈹€鈹€ 10. 瀵艰埅棣栭〉 ui_nav_home 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const home = this.add.graphics();
++    // 灞嬭韩
++    home.fillStyle(0xffecc6, 1);
++    home.fillRoundedRect(22, 48, 56, 42, 6);
++    home.lineStyle(3, 0x8a5a00, 1);
++    home.strokeRoundedRect(22, 48, 56, 42, 6);
++    // 灞嬮《
++    home.fillStyle(0x2ed573, 1);
++    this._fillTriangle(home, 10, 50, 50, 14, 90, 50);
++    home.lineStyle(3, 0x20bf6b, 1);
++    home.beginPath(); home.moveTo(10, 50); home.lineTo(50, 14); home.lineTo(90, 50); home.strokePath();
++    // 闂?+    home.fillStyle(0x8a5a00, 1);
++    home.fillRoundedRect(40, 62, 20, 28, 4);
++    // 绐?+    home.fillStyle(0x74c0fc, 1);
++    home.fillRoundedRect(26, 55, 12, 12, 2);
++    home.fillRoundedRect(62, 55, 12, 12, 2);
++    home.generateTexture('ui_nav_home', S, S);
++    home.destroy();
++
++    // 鈹€鈹€鈹€ 11. 瀵艰埅鍦板浘 ui_nav_map 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const navMap = this.add.graphics();
++    // 鍗疯酱搴?+    navMap.fillStyle(0xffecc6, 1);
++    navMap.fillRoundedRect(14, 20, 72, 56, 8);
++    navMap.lineStyle(3, 0xcd6133, 1);
++    navMap.strokeRoundedRect(14, 20, 72, 56, 8);
++    // 鍗疯酱涓ょ
++    navMap.fillStyle(0xe5c290, 1);
++    navMap.fillCircle(14, 48, 8);
++    navMap.fillCircle(86, 48, 8);
++    navMap.lineStyle(2, 0x8f531d, 1);
++    navMap.strokeCircle(14, 48, 8);
++    navMap.strokeCircle(86, 48, 8);
++    // 璺緞鏍囪
++    navMap.lineStyle(4, 0xff4757, 0.85);
++    navMap.beginPath();
++    navMap.moveTo(28, 60);
++    navMap.lineTo(44, 40);
++    navMap.lineTo(62, 56);
++    navMap.lineTo(76, 36);
++    navMap.strokePath();
++    // 鏃楀笢
++    navMap.fillStyle(0xff4757, 1);
++    this._fillTriangle(navMap, 72, 26, 84, 26, 78, 36);
++    navMap.generateTexture('ui_nav_map', S, S);
++    navMap.destroy();
++
++    // 鈹€鈹€鈹€ 12. 瀵艰埅瀹犵墿 ui_nav_pet 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const petI = this.add.graphics();
++    // 鐧借壊鍏旇劯
++    petI.fillStyle(0xffffff, 1);
++    petI.fillCircle(50, 58, 28);
++    // 鑰虫湹
++    petI.fillEllipse(34, 26, 12, 28);
++    petI.fillEllipse(66, 26, 12, 28);
++    // 鍐呰€?+    petI.fillStyle(0xffb3c6, 1);
++    petI.fillEllipse(34, 26, 6, 20);
++    petI.fillEllipse(66, 26, 6, 20);
++    // 鐪肩潧
++    petI.fillStyle(0x2c2c54, 1);
++    petI.fillCircle(40, 54, 4);
++    petI.fillCircle(60, 54, 4);
++    // 鑵孩
++    petI.fillStyle(0xffb3c6, 0.65);
++    petI.fillCircle(32, 64, 6);
++    petI.fillCircle(68, 64, 6);
++    // 榧诲瓙
++    petI.fillStyle(0xff6b81, 1);
++    petI.fillCircle(50, 60, 3);
++    petI.generateTexture('ui_nav_pet', S, S);
++    petI.destroy();
++
++    // 鈹€鈹€鈹€ 13. 瀵艰埅濂栧姳 ui_nav_gift 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const gift = this.add.graphics();
++    // 鐩掑瓙
++    gift.fillStyle(0xff6eb4, 1);
++    gift.fillRoundedRect(16, 34, 68, 52, 8);
++    gift.lineStyle(3, 0xffffff, 1);
++    gift.strokeRoundedRect(16, 34, 68, 52, 8);
++    // 涓濆甫绔?+    gift.fillStyle(0xffd43b, 1);
++    gift.fillRect(44, 34, 12, 52);
++    // 涓濆甫妯?+    gift.fillRect(16, 52, 68, 12);
++    // 铦磋澏缁?+    gift.fillEllipse(38, 28, 14, 10);
++    gift.fillEllipse(62, 28, 14, 10);
++    gift.fillCircle(50, 30, 5);
++    gift.generateTexture('ui_nav_gift', S, S);
++    gift.destroy();
++
++    // 鈹€鈹€鈹€ 14. 瀵艰埅鎺掕 ui_nav_trophy 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const trop = this.add.graphics();
++    // 濂栨澂韬?+    trop.fillStyle(0xffd23f, 1);
++    trop.fillRoundedRect(26, 18, 48, 38, 10);
++    trop.lineStyle(3, 0xffa502, 1);
++    trop.strokeRoundedRect(26, 18, 48, 38, 10);
++    // 鎶婃墜
++    trop.lineStyle(5, 0xffd23f, 1);
++    trop.beginPath();
++    trop.arc(26, 36, 12, Math.PI * 0.5, Math.PI * 1.5);
++    trop.strokePath();
++    trop.beginPath();
++    trop.arc(74, 36, 12, Math.PI * 1.5, Math.PI * 0.5);
++    trop.strokePath();
++    // 鏌?+    trop.fillStyle(0xffa502, 1);
++    trop.fillRect(44, 56, 12, 14);
++    // 搴曞骇
++    trop.fillRoundedRect(30, 70, 40, 12, 4);
++    trop.lineStyle(2, 0xffa502, 1);
++    trop.strokeRoundedRect(30, 70, 40, 12, 4);
++    // 涓績鏄?+    trop.fillStyle(0xffffff, 0.9);
++    this._fillStar(trop, 50, 36, 5, 5, 12);
++    trop.generateTexture('ui_nav_trophy', S, S);
++    trop.destroy();
++
++    // 鈹€鈹€鈹€ 15. 姘存淮 ui_status_drop 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const drop = this.add.graphics();
++    drop.fillStyle(0x4db6ff, 1);
++    drop.fillCircle(50, 58, 28);
++    this._fillTriangle(drop, 50, 10, 26, 44, 74, 44);
++    drop.fillStyle(0xffffff, 0.45);
++    drop.fillCircle(38, 50, 7);
++    drop.generateTexture('ui_status_drop', S, S);
++    drop.destroy();
++
++    // 鈹€鈹€鈹€ 16. 缁胯壊鍔犲彿鎸夐挳 ui_plus_btn 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const plus = this.add.graphics();
++    plus.fillStyle(0x22c55e, 1); // green
++    plus.fillCircle(50, 50, 42);
++    plus.lineStyle(4, 0xffffff, 1);
++    plus.strokeCircle(50, 50, 42);
++    // Draw + sign
++    plus.fillStyle(0xffffff, 1);
++    plus.fillRect(45, 25, 10, 50);
++    plus.fillRect(25, 45, 50, 10);
++    plus.generateTexture('ui_plus_btn', S, S);
++    plus.destroy();
++
++    // 鈹€鈹€鈹€ 17. 钃濊壊璁剧疆鎸夐挳 ui_settings_btn 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const settings = this.add.graphics();
++    settings.fillStyle(0x38bdf8, 1); // sky blue
++    settings.fillCircle(50, 50, 44);
++    settings.lineStyle(4, 0xffffff, 1);
++    settings.strokeCircle(50, 50, 44);
++    // Draw gear teeth
++    settings.fillStyle(0xffffff, 1);
++    settings.fillCircle(50, 50, 18);
++    for (let i = 0; i < 8; i++) {
++      const angle = (i * Math.PI) / 4;
++      const tx = 50 + Math.cos(angle) * 22;
++      const ty = 50 + Math.sin(angle) * 22;
++      settings.fillCircle(tx, ty, 6);
++    }
++    // Inner hole
++    settings.fillStyle(0x38bdf8, 1);
++    settings.fillCircle(50, 50, 9);
++    settings.generateTexture('ui_settings_btn', S, S);
++    settings.destroy();
++
++    // 鈹€鈹€鈹€ 18. 绮夎壊灏忓厰 face ui_animal_bunny 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const ab = this.add.graphics();
++    ab.fillStyle(0xffc2d1, 1); // pink face
++    ab.fillCircle(50, 55, 30);
++    // ears
++    ab.fillEllipse(35, 20, 10, 24);
++    ab.fillEllipse(65, 20, 10, 24);
++    ab.fillStyle(0xffe3e9, 1); // inner ears
++    ab.fillEllipse(35, 20, 5, 18);
++    ab.fillEllipse(65, 20, 5, 18);
++    // eyes
++    ab.fillStyle(0x2f3542, 1);
++    ab.fillCircle(40, 50, 4);
++    ab.fillCircle(60, 50, 4);
++    ab.fillStyle(0xffffff, 1);
++    ab.fillCircle(42, 48, 1.5);
++    ab.fillCircle(62, 48, 1.5);
++    // nose
++    ab.fillStyle(0xff4757, 1);
++    ab.fillCircle(50, 58, 3);
++    // cheeks
++    ab.fillStyle(0xff8da1, 0.5);
++    ab.fillCircle(33, 56, 5);
++    ab.fillCircle(67, 56, 5);
++    ab.generateTexture('ui_animal_bunny', S, S);
++    ab.destroy();
++
++    // 鈹€鈹€鈹€ 19. 缁胯壊灏忚洐 face ui_animal_frog 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const af = this.add.graphics();
++    af.fillStyle(0x2ed573, 1); // green face
++    af.fillCircle(50, 55, 30);
++    // eyes
++    af.fillCircle(35, 25, 10);
++    af.fillCircle(65, 25, 10);
++    af.fillStyle(0xffffff, 1);
++    af.fillCircle(35, 25, 7);
++    af.fillCircle(65, 25, 7);
++    af.fillStyle(0x2f3542, 1);
++    af.fillCircle(35, 25, 3.5);
++    af.fillCircle(65, 25, 3.5);
++    // cheeks
++    af.fillStyle(0xff4757, 0.4);
++    af.fillCircle(30, 58, 5);
++    af.fillCircle(70, 58, 5);
++    // mouth
++    af.lineStyle(3, 0x1e824c, 1);
++    af.beginPath();
++    af.arc(50, 58, 12, 0, Math.PI);
++    af.strokePath();
++    af.generateTexture('ui_animal_frog', S, S);
++    af.destroy();
++
++    // 鈹€鈹€鈹€ 20. 榛勮壊灏忛浮 face ui_animal_chick 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const ac = this.add.graphics();
++    ac.fillStyle(0xffd32a, 1); // yellow face
++    ac.fillCircle(50, 55, 30);
++    // eyes
++    ac.fillStyle(0x2f3542, 1);
++    ac.fillCircle(40, 50, 4);
++    ac.fillCircle(60, 50, 4);
++    ac.fillStyle(0xffffff, 1);
++    ac.fillCircle(41, 48, 1.5);
++    ac.fillCircle(61, 48, 1.5);
++    // beak
++    ac.fillStyle(0xff9f43, 1);
++    ac.fillTriangle(44, 55, 56, 55, 50, 63);
++    // blush
++    ac.fillStyle(0xffa502, 0.4);
++    ac.fillCircle(32, 56, 4);
++    ac.fillCircle(68, 56, 4);
++    ac.generateTexture('ui_animal_chick', S, S);
++    ac.destroy();
++
++    // 鈹€鈹€鈹€ 21. 妫曡壊灏忕唺 face ui_animal_bear 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++    const abe = this.add.graphics();
++    abe.fillStyle(0x8d6e63, 1); // brown face
++    abe.fillCircle(50, 55, 30);
++    // ears
++    abe.fillCircle(30, 28, 10);
++    abe.fillCircle(70, 28, 10);
++    abe.fillStyle(0xd7ccc8, 1);
++    abe.fillCircle(30, 28, 6);
++    abe.fillCircle(70, 28, 6);
++    // muzzle
++    abe.fillStyle(0xf5f5f5, 1);
++    abe.fillEllipse(50, 60, 12, 9);
++    // nose
++    abe.fillStyle(0x2f3542, 1);
++    abe.fillCircle(50, 56, 3.5);
++    // eyes
++    abe.fillStyle(0x2f3542, 1);
++    abe.fillCircle(38, 48, 4);
++    abe.fillCircle(62, 48, 4);
++    abe.fillStyle(0xffffff, 1);
++    abe.fillCircle(39, 46, 1.5);
++    abe.fillCircle(63, 46, 1.5);
++    abe.generateTexture('ui_animal_bear', S, S);
++    abe.destroy();
++  }
+ }
++
+diff --git a/src/scenes/GameScene.js b/src/scenes/GameScene.js
+index c2ccdc5..cee63c0 100644
+--- a/src/scenes/GameScene.js
++++ b/src/scenes/GameScene.js
+@@ -1,7 +1,7 @@
+ // =============================================
+ // JoyPop 娓告垙娑堥櫎鍦烘櫙 - 閲嶆瀯鐗? // =============================================
+-import { BOARD_CONFIG, BOOSTER_TYPE, CHAPTERS } from '../config/GameConfig.js';
++import { BOARD_CONFIG, BOOSTER_TYPE, CHAPTERS, TILE_TYPES } from '../config/GameConfig.js';
+ import { getLevel, getChapterForLevel } from '../config/LevelData.js';
+ import { Board } from '../utils/Board.js';
+ import { SaveSystem } from '../utils/SaveSystem.js';
+@@ -16,9 +16,19 @@ export class GameScene extends Phaser.Scene {
+     this.chapterId = getChapterForLevel(this.levelId);
+     this.chapter = CHAPTERS[this.chapterId - 1];
+ 
+-    // 鍔ㄦ€佽皟鏁存柟鍧楀ぇ灏忎互鐣欏嚭宸︿晶鍨傜洿鍒嗘暟鏉＄殑绌洪棿
+-    BOARD_CONFIG.tileSize = 48;
+-    BOARD_CONFIG.boardOffsetY = 155;
++    // 鈹€鈹€ 妫嬬洏鏂瑰潡鑷€傚簲灞忓箷灏哄璁＄畻 鈹€鈹€
++    const { width, height } = this.cameras.main;
++    const boardStartX = 74;
++    const rightMargin = 10;
++    const availableW = width - boardStartX - rightMargin;
++    
++    // 7 鍒?+    const step = Math.floor(availableW / BOARD_CONFIG.cols);
++    BOARD_CONFIG.tileGap = Math.max(2, Math.floor(step * 0.08));
++    BOARD_CONFIG.tileSize = step - BOARD_CONFIG.tileGap;
++    
++    // Y 杞村亸绉昏嚜閫傚簲
++    BOARD_CONFIG.boardOffsetY = Math.floor(height * 0.19);
+   }
+ 
+   create() {
+@@ -38,11 +48,17 @@ export class GameScene extends Phaser.Scene {
+ 
+   _drawBackground() {
+     const { width, height } = this.cameras.main;
+-    const g = this.add.graphics();
+-    const c1 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientFrom).color;
+-    const c2 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientTo).color;
+-    g.fillGradientStyle(c1, c1, c2, c2, 1);
+-    g.fillRect(0, 0, width, height);
++
++    if (this.textures.exists('gameplay_ui_bg')) {
++      const bg = this.add.image(width / 2, height / 2, 'gameplay_ui_bg');
++      bg.setDisplaySize(width, height);
++    } else {
++      const g = this.add.graphics();
++      const c1 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientFrom).color;
++      const c2 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientTo).color;
++      g.fillGradientStyle(c1, c1, c2, c2, 1);
++      g.fillRect(0, 0, width, height);
++    }
+ 
+     // 鑳屾櫙瑁呴グ灏忔皵娉?     for (let i = 0; i < 6; i++) {
+@@ -73,13 +89,15 @@ export class GameScene extends Phaser.Scene {
+     const { width } = this.cameras.main;
+     const HUD_DEPTH = 50;
+ 
+-    // 鍔ㄦ€佽绠椾笁涓兌鍥婄殑瀹藉害锛堝熀浜庡睆骞曞搴︼級
+-    const p1W = Math.floor(width * 0.285); // 姝ユ暟鑳跺泭
+-    const p2W = Math.floor(width * 0.415); // 鐩爣鑳跺泭
+-    const p3W = Math.floor(width * 0.265); // 鏄熺骇鑳跺泭
+-    const hudH = 44;
++    // 鍔ㄦ€佽绠椾笁涓兌鍥婄殑瀹藉害锛堣嚜閫傚簲灏忓睆锛岄槻姝㈡孩鍑猴級
++    const margin = 8;
+     const gap = 6;
+-    const p1X = 8;
++    const availableW = width - margin * 2 - gap * 2;
++    const p1W = Math.floor(availableW * 0.29); // 姝ユ暟鑳跺泭
++    const p2W = Math.floor(availableW * 0.42); // 鐩爣鑳跺泭
++    const p3W = availableW - p1W - p2W;        // 鏄熺骇鑳跺泭
++    const hudH = 44;
++    const p1X = margin;
+     const p2X = p1X + p1W + gap;
+     const p3X = p2X + p2W + gap;
+ 
+@@ -90,12 +108,12 @@ export class GameScene extends Phaser.Scene {
+     barLeft.lineStyle(2.5, 0xffffff, 0.9);
+     barLeft.strokeRoundedRect(p1X, 10, p1W, hudH, 22);
+ 
+-    this.add.text(p1X + p1W * 0.32, 10 + hudH / 2, '馃惥', {
+-      fontSize: '14px',
+-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
++    // 鏇挎崲 flat Emojis 馃惥 涓哄叏鏂扮殑楂樹繚鐪熺煝閲忕埅鍗?ui_icon_moves
++    this.add.image(p1X + 18, 10 + hudH / 2, 'ui_icon_moves')
++      .setDisplaySize(24, 24).setDepth(HUD_DEPTH + 1);
+ 
+-    this.movesText = this.add.text(p1X + p1W * 0.72, 10 + hudH / 2, `${this.levelData.moves}`, {
+-      fontSize: '22px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
++    this.movesText = this.add.text(p1X + p1W - 20, 10 + hudH / 2, `${this.levelData.moves}`, {
++      fontSize: '20px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
+     }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
+ 
+     // 2. 涓棿濂舵补鑹茬洰鏍囪兌鍥?@@ -105,19 +123,26 @@ export class GameScene extends Phaser.Scene {
+     barMid.lineStyle(2.5, 0xffb3d9, 1);
+     barMid.strokeRoundedRect(p2X, 10, p2W, hudH, 22);
+ 
++    this.p2W = p2W;
+     this.objGroup = this.add.container(p2X, 10).setDepth(HUD_DEPTH + 1);
+     this._updateObjectivesUI(this.levelData.objectives.map(o => ({ ...o, done: 0 })));
+ 
+-    // 3. 鍙充晶鏄熺骇鑳跺泭
++    // 3. 鍙充晶鏄熺骇鑳跺泭 (浣跨敤绔嬩綋鍥剧墖鏄熸槦浠ｆ浛 emoji 鏂囧瓧)
+     const barRight = this.add.graphics().setDepth(HUD_DEPTH);
+     barRight.fillStyle(0xfff4f8, 1);
+     barRight.fillRoundedRect(p3X, 10, p3W, hudH, 22);
+     barRight.lineStyle(2.5, 0xffb3d9, 1);
+     barRight.strokeRoundedRect(p3X, 10, p3W, hudH, 22);
+ 
+-    this.starsText = this.add.text(p3X + p3W / 2, 10 + hudH / 2, '馃挆 馃挆 馃挆', {
+-      fontSize: '13px',
+-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
++    this.starImages = [];
++    const starSpacing = p3W / 4;
++    for (let i = 0; i < 3; i++) {
++      const starX = p3X + starSpacing * (i + 1);
++      const starY = 10 + hudH / 2;
++      const img = this.add.image(starX, starY, 'star_gray')
++        .setDisplaySize(22, 22).setDepth(HUD_DEPTH + 1);
++      this.starImages.push(img);
++    }
+   }
+ 
+   _updateObjectivesUI(objectives) {
+@@ -127,26 +152,38 @@ export class GameScene extends Phaser.Scene {
+     const firstObj = objectives[0];
+     if (!firstObj) return;
+ 
+-    // 鏄剧ず褰撳墠娑堥櫎鐩爣鐨勬按鏋?Emoji
+-    const emojiText = this.add.text(26, 21, firstObj.emoji || '馃崜', { fontSize: '20px' }).setOrigin(0.5);
++    // 鏍规嵁鐩爣绫诲瀷鍔犺浇瀵瑰簲鐨勭簿缇庢按鏋?瀹濈煶 PNG 鍥剧墖
++    let objGraphic;
++    const matchingTile = TILE_TYPES.find(t => t.emoji === firstObj.emoji || t.id === firstObj.target);
++    if (matchingTile && this.textures.exists(matchingTile.key)) {
++      objGraphic = this.add.image(22, 21, matchingTile.key).setDisplaySize(28, 28);
++    } else {
++      // 澶囩敤锛氫紶缁?Emojis
++      objGraphic = this.add.text(22, 21, firstObj.emoji || '馃崜', { fontSize: '20px' }).setOrigin(0.5);
++    }
+     
++    // 鍔ㄦ€佽绠楄繘搴︽潯鐨勮捣濮嬩笌瀹藉害锛岄槻姝㈠皬灞忓箷涓嬭秴鍑鸿兌鍥婅竟鐣?+    const p2W = this.p2W || 150;
++    const progressX = 48;
++    const progressW = p2W - progressX - 10;
++
+     // 鏄剧ず鐩爣杩涘害鏂囨湰
+-    const countText = this.add.text(92, 13, `娑堥櫎 ${firstObj.done}/${firstObj.count}`, {
+-      fontSize: '11px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
++    const countText = this.add.text(progressX + progressW / 2, 13, `娑堥櫎 ${firstObj.done}/${firstObj.count}`, {
++      fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
+     }).setOrigin(0.5);
+ 
+     // 缁胯壊鑳跺泭杩涘害鏉¤儗鏅?     const progressBg = this.add.graphics();
+     progressBg.fillStyle(0xe2e6ea, 1);
+-    progressBg.fillRoundedRect(56, 23, 110, 10, 5);
++    progressBg.fillRoundedRect(progressX, 23, progressW, 9, 4.5);
+ 
+     // 杩涘害鏉″～鍏?     const pct = Math.min(firstObj.done / firstObj.count, 1);
+     const progressFill = this.add.graphics();
+     progressFill.fillStyle(0x20c997, 1);
+-    progressFill.fillRoundedRect(56, 23, Math.max(8, 110 * pct), 10, 5);
++    progressFill.fillRoundedRect(progressX, 23, Math.max(6, progressW * pct), 9, 4.5);
+ 
+-    this.objGroup.add([emojiText, countText, progressBg, progressFill]);
++    this.objGroup.add([objGraphic, countText, progressBg, progressFill]);
+ 
+     // 鏇存柊姝ユ暟
+     if (this.movesText && this.board) {
+@@ -188,11 +225,11 @@ export class GameScene extends Phaser.Scene {
+     // 瀹炴椂閲戣壊濉厖鍥惧眰
+     this.scoreFillG = this.add.graphics();
+ 
+-    // 鍦ㄥ乏渚х粯鍒?3 棰楁槦鐨勮瘎绾ф爣璁?+    // 鍦ㄥ乏渚х粯鍒?3 棰楁槦鐨勮瘎绾ф爣璁?(浣跨敤鎴戜滑棰勫姞杞界殑 3D 鏄熸槦鍥剧墖)
+     const starYOffsets = [0.66, 0.33, 0.05]; // 瀵瑰簲 1鏄熴€?鏄熴€?鏄熼珮搴?     this.starMarks = starYOffsets.map((pct, idx) => {
+       const y = pipeY + pipeH * pct;
+-      return this.add.text(14, y, '猸?, { fontSize: '13px' }).setOrigin(0.5);
++      return this.add.image(14, y, 'star_gray').setDisplaySize(16, 16);
+     });
+ 
+     this._updateScoreBar(0);
+@@ -213,20 +250,22 @@ export class GameScene extends Phaser.Scene {
+       this.scoreFillG.strokeRoundedRect(pipeX - pipeW/2, pipeY + pipeH - fillH, pipeW, fillH, pipeW/2);
+     }
+ 
+-    // 鍔ㄦ€佽皟鏁撮《閮ㄦ槦鏄?Emoji 鐨勯珮鍏?+    // 鍔ㄦ€佽皟鏁存槦鏄熼珮鍏?(鍒囨崲鍥剧墖绾圭悊涓洪噾鑹叉槦鏄?
+     if (this.starMarks) {
+-      if (pct >= 0.33) this.starMarks[0].setStyle({ fontSize: '16px' });
+-      if (pct >= 0.66) this.starMarks[1].setStyle({ fontSize: '16px' });
+-      if (pct >= 0.95) this.starMarks[2].setStyle({ fontSize: '16px' });
++      if (pct >= 0.33) { this.starMarks[0].setTexture('star_gold'); this.starMarks[0].setDisplaySize(20, 20); }
++      if (pct >= 0.66) { this.starMarks[1].setTexture('star_gold'); this.starMarks[1].setDisplaySize(20, 20); }
++      if (pct >= 0.95) { this.starMarks[2].setTexture('star_gold'); this.starMarks[2].setDisplaySize(20, 20); }
+     }
+ 
+-    // 鏍规嵁鏄熺骇鏇存柊鍙充晶鐖卞績鑳跺泭鐨勬枃瀛?+    // 鏍规嵁鏄熺骇鏇存柊鍙充晶鏄熺骇鑳跺泭鐨勫浘鐗囨槦鏄?     let starCount = 0;
+     if (pct >= 0.33) starCount = 1;
+     if (pct >= 0.66) starCount = 2;
+     if (pct >= 0.95) starCount = 3;
+-    if (this.starsText) {
+-      this.starsText.setText('馃挅'.repeat(starCount) + '馃枻'.repeat(3 - starCount));
++    if (this.starImages) {
++      this.starImages.forEach((img, idx) => {
++        img.setTexture(idx < starCount ? 'star_gold' : 'star_gray');
++      });
+     }
+   }
+ 
+@@ -255,8 +294,10 @@ export class GameScene extends Phaser.Scene {
+   // 鈹€鈹€ 宸︿笅瑙掑皬鍏旀嫑鎵嬪姪濞?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawBunnyHelper() {
+     const { height } = this.cameras.main;
+-    if (this.textures.exists('bunny')) {
+-      const b = this.add.image(44, height - 120, 'bunny').setScale(0.06).setDepth(10);
++    const bunnyKey = this.textures.exists('bunny_happy') ? 'bunny_happy'
++      : this.textures.exists('bunny') ? 'bunny' : null;
++    if (bunnyKey) {
++      const b = this.add.image(44, height - 120, bunnyKey).setScale(0.35).setDepth(10);
+       this.tweens.add({
+         targets: b,
+         y: height - 124,
+@@ -276,57 +317,75 @@ export class GameScene extends Phaser.Scene {
+     const boosters = Object.values(BOOSTER_TYPE);
+     const BOOSTER_DEPTH = 60;
+ 
+-    const itemSize = 48;
+-    const itemGap = 10;
+-    const barW = boosters.length * (itemSize + itemGap) + 16;
+-    const barX = 90; // 鍙崇Щ闃叉閬尅灏忓厰
+-    const barH = 66;
++    // 鍔ㄦ€佽绠楀昂瀵稿拰闂磋窛锛岀‘淇濆畬缇庨€傞厤浠讳綍绉诲姩绔搴?+    const itemSize = Math.min(50, Math.floor(width * 0.125));
++    const itemGap = Math.min(8, Math.floor(width * 0.02));
++    const barW = boosters.length * (itemSize + itemGap) - itemGap + 20;
++    const barX = Math.floor((width - barW) / 2);
++    const barH = Math.floor(itemSize * 1.45);
+     const barY = height - barH - 10;
+ 
++    // 纾ㄧ爞鐧藉簳鏍?     const barBg = this.add.graphics().setDepth(BOOSTER_DEPTH);
+-    barBg.fillStyle(0xfffcf2, 0.97);
+-    barBg.fillRoundedRect(barX, barY, barW, barH, 33);
++    barBg.fillStyle(0xffffff, 0.95);
++    barBg.fillRoundedRect(barX, barY, barW, barH, barH / 2);
+     barBg.lineStyle(2.5, 0xffb3d9, 1);
+-    barBg.strokeRoundedRect(barX, barY, barW, barH, 33);
++    barBg.strokeRoundedRect(barX, barY, barW, barH, barH / 2);
++
++    const textureMap = {
++      hammer: 'ui_booster_hammer',
++      shuffle: 'ui_booster_shuffle',
++      extra: 'ui_booster_extra',
++      rainbow: 'ui_booster_rainbow',
++      pet: 'ui_nav_pet'
++    };
+ 
+     boosters.forEach((booster, i) => {
+-      const bx = barX + 8 + i * (itemSize + itemGap) + itemSize / 2;
++      const bx = barX + 10 + i * (itemSize + itemGap) + itemSize / 2;
+       const by = barY + barH / 2;
+       const count = this.saveData.boosters[booster.id] || 0;
++      const r = itemSize / 2 - 2;
+ 
+-      // 钃濊壊鍦嗗舰鎸夐挳
++      // 鐧借壊鍦嗗簳 + 绮夎壊/鐏拌壊鎻忚竟
+       const btn = this.add.graphics().setDepth(BOOSTER_DEPTH + 1);
+-      btn.fillStyle(count > 0 ? 0x448aff : 0xaaaaaa, 1);
+-      btn.fillCircle(bx, by, itemSize / 2 - 2);
+-      btn.lineStyle(2.5, 0xffffff, 0.9);
+-      btn.strokeCircle(bx, by, itemSize / 2 - 2);
+-      // 楂樺厜
+-      btn.fillStyle(0xffffff, 0.18);
+-      btn.fillEllipse(bx, by - 7, 22, 12);
+-
+-      this.add.text(bx, by - 1, booster.emoji, { fontSize: '18px' })
+-        .setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
++      // 闃村奖
++      btn.fillStyle(0x000000, 0.08);
++      btn.fillCircle(bx + 1, by + 2, r);
++      // 鎸夐挳搴曡壊
++      btn.fillStyle(count > 0 ? 0xffffff : 0xf0f0f0, 1);
++      btn.fillCircle(bx, by, r);
++      btn.lineStyle(2.5, count > 0 ? 0xffb3d9 : 0xcccccc, 1);
++      btn.strokeCircle(bx, by, r);
++
++      // 娓叉煋鐭㈤噺閬撳叿鍥炬爣锛堝湪鐧借壊搴曚笂娓呮櫚鍙锛?+      const textureKey = textureMap[booster.id] || 'star_gold';
++      const iconDisplaySize = itemSize * 0.68;
++      const icon = this.add.image(bx, by, textureKey)
++        .setDisplaySize(iconDisplaySize, iconDisplaySize).setDepth(BOOSTER_DEPTH + 2);
++      if (count <= 0) {
++        icon.setAlpha(0.4);
++      }
+ 
+       // 鏁伴噺瑙掓爣
+       if (count > 0) {
+-        const badge = this.add.graphics().setDepth(BOOSTER_DEPTH + 2);
++        const badgeX = bx + Math.floor(r * 0.7);
++        const badgeY = by - Math.floor(r * 0.6);
++        const badgeR = Math.floor(itemSize * 0.18);
++        const badge = this.add.graphics().setDepth(BOOSTER_DEPTH + 3);
+         badge.fillStyle(0xff4757, 1);
+-        badge.fillCircle(bx + 13, by + 12, 9);
+-        this.add.text(bx + 13, by + 12, `${count}`, {
+-          fontSize: '9px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
+-        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 3);
+-      } else {
+-        // 鏃犲簱瀛樻椂鏄剧ず鍔犲彿鎻愮ず
+-        this.add.text(bx, by + 14, '+璐拱', {
+-          fontSize: '7px', fontFamily: 'Nunito', fill: '#ffffff',
+-        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
++        badge.fillCircle(badgeX, badgeY, badgeR);
++        badge.lineStyle(1.5, 0xffffff, 1);
++        badge.strokeCircle(badgeX, badgeY, badgeR);
++        this.add.text(badgeX, badgeY, `${count}`, {
++          fontSize: `${Math.floor(itemSize * 0.22)}px`, fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
++        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 4);
+       }
+ 
+-      // 浜や簰鍖猴紙zone 闃叉灞傜骇闂锛?-      const hit = this.add.zone(bx, by, itemSize, itemSize).setInteractive().setDepth(BOOSTER_DEPTH + 3);
++      // 浜や簰鍖?+      const hit = this.add.zone(bx, by, itemSize, itemSize).setInteractive().setDepth(BOOSTER_DEPTH + 5);
+       hit.on('pointerdown', () => this._useBooster(booster.id, count));
+-      hit.on('pointerover', () => this.tweens.add({ targets: btn, scaleX: 1.12, scaleY: 1.12, duration: 80 }));
+-      hit.on('pointerout', () => this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 }));
++      hit.on('pointerover', () => this.tweens.add({ targets: [btn, icon], scaleX: 1.1, scaleY: 1.1, duration: 80 }));
++      hit.on('pointerout', () => this.tweens.add({ targets: [btn, icon], scaleX: 1, scaleY: 1, duration: 80 }));
+     });
+   }
+ 
+diff --git a/src/scenes/MainMenuScene.js b/src/scenes/MainMenuScene.js
+index 81907ae..5dde4de 100644
+--- a/src/scenes/MainMenuScene.js
++++ b/src/scenes/MainMenuScene.js
+@@ -20,7 +20,7 @@ export class MainMenuScene extends Phaser.Scene {
+     this._drawTitle(width, height);
+     this._drawCharacter(width, height);
+     this._drawPlayButton(width, height);
+-    this._drawNavBar(width, height, 0);
++    // 绉婚櫎浜嗗簳閮ㄥ鑸爮锛岀鍚堝浘鐗?鐨勬棤瀵艰埅璁捐
+     this._drawFloatingParticles(width, height);
+     this._checkDailyReward();
+   }
+@@ -49,121 +49,160 @@ export class MainMenuScene extends Phaser.Scene {
+   // 鈹€鈹€ 椤堕儴 HUD 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawTopHUD(width, height) {
+     const d = this.saveData;
+-    const g = this.add.graphics();
+-    g.setDepth(10);
+-
+     const hudY = height * 0.016;
+-    const hudH = height * 0.068;
+-    const profW = width * 0.42;
+-
+-    // 1. 鐜╁ Profile 鑳跺泭
+-    g.fillStyle(0xffffff, 0.96);
+-    g.lineStyle(2.5, 0xffb3d9, 1);
+-    g.fillRoundedRect(10, hudY, profW, hudH, hudH / 2);
+-    g.strokeRoundedRect(10, hudY, profW, hudH, hudH / 2);
+-
+-    // 澶村儚鍦?-    const avatarSize = hudH * 0.78;
+-    const avatarX = 10 + hudH / 2;
+-    const avatarY = hudY + hudH / 2;
+-    g.fillStyle(0xffd6f0, 1);
+-    g.fillCircle(avatarX, avatarY, avatarSize / 2);
+-    g.lineStyle(2, 0xff6eb4, 1);
+-    g.strokeCircle(avatarX, avatarY, avatarSize / 2);
+-    this.add.text(avatarX, avatarY, '馃', {
+-      fontSize: `${Math.floor(avatarSize * 0.55)}px`,
+-    }).setOrigin(0.5).setDepth(11);
+-
+-    // 绛夌骇寰界珷
+-    const lvlBg = this.add.graphics().setDepth(11);
+-    const lvlX = avatarX + avatarSize / 2 + 8;
+-    const lvlW = profW - avatarSize - 28;
+-    lvlBg.fillStyle(0x7950f2, 1);
+-    lvlBg.fillRoundedRect(lvlX, hudY + 6, lvlW * 0.42, hudH * 0.3, 6);
+-    this.add.text(lvlX + lvlW * 0.21, hudY + 6 + (hudH * 0.3) / 2,
+-      `Lv.${d.player.level}`, {
+-        fontSize: `${Math.floor(hudH * 0.21)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ffffff',
+-      }).setOrigin(0.5).setDepth(12);
+-
+-    this.add.text(lvlX, hudY + hudH * 0.5, d.player.name, {
+-      fontSize: `${Math.floor(hudH * 0.26)}px`, fontFamily: 'Nunito, sans-serif',
+-      fontStyle: 'bold', fill: '#5a2d82',
+-    }).setDepth(12);
+-
+-    // 鐐瑰嚮鎵撳紑涓汉涓婚〉
+-    const profHit = this.add.zone(10 + profW / 2, hudY + hudH / 2, profW, hudH)
+-      .setInteractive().setDepth(13);
+-    profHit.on('pointerdown', () => {
+-      const logged = SaveSystem.getCurrentUser();
+-      if (logged) ModalSystem.showProfileModal(this, this.saveData);
+-      else ModalSystem.showAuthModal(this, this.saveData, 'login');
++    const hudH = Math.min(38, height * 0.05);
++
++    const margin = 8;
++    const gap = 6;
++    const gearSize = hudH * 1.1;
++
++    // 璁剧疆榻胯疆鎸夐挳 (鍙充笂瑙?
++    const gearX = width - margin - gearSize / 2;
++    const gearY = hudY + hudH / 2;
++
++    const gearBtn = this.add.image(gearX, gearY, 'ui_settings_btn')
++      .setDisplaySize(gearSize, gearSize)
++      .setDepth(20)
++      .setInteractive({ useHandCursor: true });
++
++    gearBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: gearBtn, scaleX: 0.88, scaleY: 0.88, duration: 80, yoyo: true });
++      this.time.delayedCall(100, () => {
++        ModalSystem.showNavigationSettingsModal(this, this.saveData);
++      });
+     });
++    gearBtn.on('pointerover', () => this.tweens.add({ targets: gearBtn, scaleX: 1.08, scaleY: 1.08, duration: 80 }));
++    gearBtn.on('pointerout', () => this.tweens.add({ targets: gearBtn, scaleX: 1, scaleY: 1, duration: 80 }));
+ 
+-    // 2. 鍙充笂瑙掕兌鍥婅
+-    const rightH = height * 0.05;
+-    const rightY = hudY + (hudH - rightH) / 2;
+-    const pill1X = width * 0.638;
+-    const pill2X = width * 0.82;
+-    const pillW = width * 0.162;
+-
+-    // 鐖卞績鑳跺泭
+-    g.fillStyle(0xffffff, 0.96);
+-    g.fillRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+-    g.strokeRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+-    this.add.text(pill1X + pillW / 2, rightY + rightH / 2,
+-      `鉂わ笍 ${d.player.hearts}`, {
+-        fontSize: `${Math.floor(rightH * 0.48)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ff4757',
+-      }).setOrigin(0.5).setDepth(11);
+-
+-    // 閲戝竵鑳跺泭
+-    g.fillStyle(0xffffff, 0.96);
+-    g.fillRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+-    g.strokeRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+-    this.add.text(pill2X + pillW / 2, rightY + rightH / 2,
+-      `馃獧 ${d.player.coins}`, {
+-        fontSize: `${Math.floor(rightH * 0.44)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ff9f5a',
+-      }).setOrigin(0.5).setDepth(11);
+-  }
++    // 璁＄畻涓変釜鑳跺泭鐨勫彲鐢ㄥ搴?(閲戝竵銆佹槦鏄熴€佷綋鍔?
++    const availableW = gearX - gearSize / 2 - margin - gap * 3;
++    const pillW = Math.floor(availableW / 3);
+ 
+-  // 鈹€鈹€ 鏍囬 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+-  _drawTitle(width, height) {
+-    const titleY = height * 0.16;
+-    // 濡傛灉鑳屾櫙鍥惧凡鍖呭惈鏍囬锛岃烦杩囩粯鍒朵互鍏嶉噸鍙?-    if (this.textures.exists('main_menu_bg')) return;
++    const coinX = margin;
++    const starX = coinX + pillW + gap;
++    const heartX = starX + pillW + gap;
++
++    // 缁熻鏄熸槦鎬绘暟
++    let totalStars = 0;
++    if (d.progress && d.progress.levelStars) {
++      totalStars = Object.values(d.progress.levelStars).reduce((sum, s) => sum + s, 0);
++    }
++
++    // 1. 閲戝竵鑳跺泭
++    this._drawHUDCapsule(coinX, hudY, pillW, hudH, 'ui_coin', `${d.player.coins}`, () => {
++      d.player.coins += 100;
++      SaveSystem.save(d);
++      this.scene.restart({ saveData: d });
++    });
++
++    // 2. 鏄熸槦鑳跺泭
++    this._drawHUDCapsule(starX, hudY, pillW, hudH, 'star_gold', `${totalStars}`, () => {
++      ModalSystem.showAchievementsModal(this);
++    });
+ 
+-    // 鏍囬闃村奖
+-    this.add.text(width / 2 + 3, titleY + 3, 'JoyPop', {
+-      fontSize: `${Math.floor(height * 0.085)}px`,
++    // 3. 浣撳姏鑳跺泭
++    this._drawHUDCapsule(heartX, hudY, pillW, hudH, 'ui_heart', `${d.player.hearts}/5`, () => {
++      if (d.player.hearts < 5) {
++        d.player.hearts = 5;
++        SaveSystem.save(d);
++        this.scene.restart({ saveData: d });
++      }
++    });
++  }
++
++  _drawHUDCapsule(x, y, w, h, iconKey, valueText, onClickPlus) {
++    const g = this.add.graphics().setDepth(20);
++    // 闃村奖
++    g.fillStyle(0x000000, 0.08);
++    g.fillRoundedRect(x + 1.5, y + 2, w, h, h / 2);
++    // 濂舵补鑹插簳鐩?+    g.fillStyle(0xfffbeb, 1);
++    g.fillRoundedRect(x, y, w, h, h / 2);
++    g.lineStyle(2.5, 0xfcd34d, 1); // 閲戦粍鑹叉弿杈?+    g.strokeRoundedRect(x, y, w, h, h / 2);
++
++    // 宸︿晶鍥炬爣
++    const iconSize = h * 0.9;
++    const icon = this.add.image(x + h / 2 + 1, y + h / 2, iconKey)
++      .setDisplaySize(iconSize, iconSize)
++      .setDepth(21);
++
++    // 鏁板€兼枃鏈?(缂╁皬涓€鐐归槻姝㈣秴鍑?
++    const textX = x + h + 2;
++    const text = this.add.text(textX, y + h / 2, valueText, {
++      fontSize: `${Math.floor(h * 0.38)}px`,
+       fontFamily: 'Nunito, sans-serif',
+       fontStyle: 'bold',
+-      fill: 'rgba(180,60,120,0.25)',
+-    }).setOrigin(0.5).setDepth(5);
++      fill: '#5d4037', // 娣辫瀛?+    }).setOrigin(0, 0.5).setDepth(21);
++
++    // 鍙充晶鍔犲彿鎸夐挳
++    const plusSize = h * 0.85;
++    const plusBtn = this.add.image(x + w - plusSize / 2 - 2, y + h / 2, 'ui_plus_btn')
++      .setDisplaySize(plusSize, plusSize)
++      .setDepth(22)
++      .setInteractive({ useHandCursor: true });
++
++    plusBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: plusBtn, scaleX: 0.85, scaleY: 0.85, duration: 80, yoyo: true });
++      onClickPlus();
++    });
+ 
+-    this.add.text(width / 2, titleY, 'JoyPop', {
+-      fontSize: `${Math.floor(height * 0.085)}px`,
+-      fontFamily: 'Nunito, sans-serif',
++    return [g, icon, text, plusBtn];
++  }
++
++  // 鈹€鈹€ 鏍囬 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++  _drawTitle(width, height) {
++    const titleY = height * 0.14;
++    const cx = width / 2;
++
++    // 缁樺埗 arched 榛勯噾澶ф爣棰?"HAPPY POP"
++    const titleText = this.add.text(cx, titleY, 'HAPPY POP', {
++      fontSize: `${Math.floor(height * 0.052)}px`,
++      fontFamily: 'Outfit, Nunito, Arial, sans-serif',
+       fontStyle: 'bold',
+-      fill: '#ff6eb4',
+-      stroke: '#ffffff',
+-      strokeThickness: 4,
++      fill: '#fbbf24', // 榛勯噾鍏夋辰
++      stroke: '#5d4037', // 绮楅粦鎻忚竟
++      strokeThickness: 7,
++      shadow: { color: '#3e2723', fill: true, offsetX: 3, offsetY: 4, blur: 0 }
+     }).setOrigin(0.5).setDepth(6);
+ 
+-    this.add.text(width / 2, titleY + height * 0.065, '娆箰娑堟秷涔?, {
+-      fontSize: `${Math.floor(height * 0.028)}px`,
++    // 鍛煎惛鍔ㄧ敾
++    this.tweens.add({
++      targets: titleText,
++      scaleX: 1.05,
++      scaleY: 1.05,
++      duration: 1200,
++      yoyo: true,
++      repeat: -1,
++      ease: 'Sine.easeInOut'
++    });
++
++    // 缁樺埗妫曡壊鏈ㄥ埗妯箙 plaque
++    const signW = 150;
++    const signH = 26;
++    const signY = titleY + height * 0.055;
++
++    const sign = this.add.graphics().setDepth(15);
++    // 闃村奖
++    sign.fillStyle(0x000000, 0.15);
++    sign.fillRoundedRect(cx - signW / 2 + 2, signY - signH / 2 + 2, signW, signH, 6);
++    // 鏈ㄧ墝
++    sign.fillStyle(0x8d6e63, 1);
++    sign.fillRoundedRect(cx - signW / 2, signY - signH / 2, signW, signH, 6);
++    sign.lineStyle(2, 0xfbbf24, 1); // 閲戣竟
++    sign.strokeRoundedRect(cx - signW / 2, signY - signH / 2, signW, signH, 6);
++
++    this.add.text(cx, signY, 'VINE VILLAGE', {
++      fontSize: '11px',
+       fontFamily: 'Nunito, sans-serif',
+       fontStyle: 'bold',
+-      fill: '#9b59b6',
+-      letterSpacing: 6,
+-    }).setOrigin(0.5).setDepth(6);
++      fill: '#ffffff',
++    }).setOrigin(0.5).setDepth(16);
+   }
+ 
+   // 鈹€鈹€ 涓ぎ瑙掕壊 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawCharacter(width, height) {
+-    if (this.textures.exists('main_menu_bg')) return;
+-
+     const cx = width / 2;
+     const charY = height * 0.46;
+ 
+@@ -178,7 +217,7 @@ export class MainMenuScene extends Phaser.Scene {
+ 
+     if (bunnyKey) {
+       const b = this.add.image(cx, charY, bunnyKey)
+-        .setScale(Math.min(width / 320, 1.4))
++        .setScale(Math.min(width / 450, 0.85))
+         .setDepth(5);
+       this.tweens.add({
+         targets: b, y: charY - 10,
+@@ -199,75 +238,99 @@ export class MainMenuScene extends Phaser.Scene {
+   // 鈹€鈹€ 寮€濮嬫父鎴忔寜閽?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawPlayButton(width, height) {
+     const cx = width / 2;
+-    const hasBg = this.textures.exists('main_menu_bg');
+-
+-    // 鑳屾櫙鍥惧凡鍖呭惈鎸夐挳瑙嗚 鈫?鍙渶鏀鹃€忔槑鐑尯
+-    // 鏃犺儗鏅浘 鈫?缁樺埗瀹炰綋娓愬彉鎸夐挳
+-    if (hasBg) {
+-      // 鍧愭爣涓庡師鑳屾櫙鍥句腑"寮€濮嬫父鎴?鎸夐挳瀵归綈
+-      const btnY = height * 0.656;
+-      const btnW = width * 0.533;
+-      const btnH = height * 0.0825;
+-
+-      const hit = this.add.zone(cx, btnY, btnW, btnH).setInteractive().setDepth(17);
+-      hit.on('pointerdown', () => {
++    const btnY = height * 0.72;
++    const btnW = width * 0.58;
++    const btnH = height * 0.075;
++    const r = btnH / 2;
++
++    // 鍒涘缓鎸夐挳瀹瑰櫒锛岃鍦?(cx, btnY) 骞跺眳涓?+    const btnContainer = this.add.container(cx, btnY).setDepth(15);
++
++    // 闃村奖 (鍦ㄥ鍣ㄥ唴锛屼腑蹇冪偣涓?0,0)
++    const shadow = this.add.graphics();
++    shadow.fillStyle(0xd44f8e, 0.35);
++    shadow.fillRoundedRect(-btnW / 2 + 3, -btnH / 2 + 5, btnW, btnH, r);
++    btnContainer.add(shadow);
++
++    // 鎸夐挳鏈綋
++    const btn = this.add.graphics();
++    btn.fillGradientStyle(0xffc048, 0xffa801, 0xff5e57, 0xff3f34, 1);
++    btn.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, r);
++    btn.lineStyle(3, 0xffffff, 0.85);
++    btn.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, r);
++    btn.fillStyle(0xffffff, 0.28);
++    btn.fillEllipse(0, -btnH / 4, btnW * 0.65, btnH * 0.38);
++    btnContainer.add(btn);
++
++    // 缁樺埗缁垮彾瑁呴グ (宸﹀彸涓や晶)
++    const leaves = this.add.graphics();
++    const lx = -btnW / 2 + 4;
++    const ly = -btnH / 3;
++    leaves.fillStyle(0x2ed573, 1);
++    leaves.fillPoints([
++      { x: lx, y: ly },
++      { x: lx - 12, y: ly - 8 },
++      { x: lx - 20, y: ly },
++      { x: lx - 8, y: ly + 10 }
++    ], true);
++    leaves.fillStyle(0x7bed9f, 1);
++    leaves.fillPoints([
++      { x: lx - 2, y: ly },
++      { x: lx - 10, y: ly - 5 },
++      { x: lx - 16, y: ly },
++      { x: lx - 8, y: ly + 6 }
++    ], true);
++
++    const rx = btnW / 2 - 4;
++    const ry = btnH / 3;
++    leaves.fillStyle(0x2ed573, 1);
++    leaves.fillPoints([
++      { x: rx, y: ry },
++      { x: rx + 12, y: ry + 8 },
++      { x: rx + 20, y: ry },
++      { x: rx + 8, y: ry - 10 }
++    ], true);
++    leaves.fillStyle(0x7bed9f, 1);
++    leaves.fillPoints([
++      { x: rx + 2, y: ry },
++      { x: rx + 10, y: ry + 5 },
++      { x: rx + 16, y: ry },
++      { x: rx + 8, y: ry - 6 }
++    ], true);
++    btnContainer.add(leaves);
++
++    const btnLabel = this.add.text(0, 0, '猸? 寮€濮嬫父鎴? 猸?, {
++      fontSize: `${Math.floor(btnH * 0.36)}px`,
++      fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
++      fill: '#ffffff', stroke: 'rgba(160,40,80,0.45)', strokeThickness: 3.5,
++    }).setOrigin(0.5);
++    btnContainer.add(btnLabel);
++
++    const hit = this.add.zone(cx, btnY, btnW, btnH).setInteractive().setDepth(17);
++    hit.on('pointerdown', () => {
++      this.tweens.add({ targets: btnContainer, scaleX: 0.93, scaleY: 0.93, duration: 80, yoyo: true });
++      this.time.delayedCall(130, () => {
+         this.cameras.main.fadeOut(280, 200, 100, 150);
+         this.cameras.main.once('camerafadeoutcomplete', () =>
+           this.scene.start('MapScene', { saveData: this.saveData })
+         );
+       });
+-    } else {
+-      // 鈹€鈹€ 鏃犺儗鏅浘鏃剁粯鍒跺疄浣撴寜閽?鈹€鈹€
+-      const btnY = height * 0.72;
+-      const btnW = width * 0.58;
+-      const btnH = height * 0.075;
+-      const r = btnH / 2;
+-
+-      const shadow = this.add.graphics().setDepth(14);
+-      shadow.fillStyle(0xd44f8e, 0.35);
+-      shadow.fillRoundedRect(cx - btnW / 2 + 3, btnY - btnH / 2 + 5, btnW, btnH, r);
+-
+-      const btn = this.add.graphics().setDepth(15);
+-      btn.fillGradientStyle(0xff9f5a, 0xff6eb4, 0xff6eb4, 0xff9f5a, 1);
+-      btn.fillRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+-      btn.lineStyle(3, 0xffffff, 0.85);
+-      btn.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+-      btn.fillStyle(0xffffff, 0.22);
+-      btn.fillEllipse(cx, btnY - btnH / 4, btnW * 0.65, btnH * 0.38);
+-
+-      const btnLabel = this.add.text(cx, btnY, '猸? 寮€濮嬫父鎴? 猸?, {
+-        fontSize: `${Math.floor(btnH * 0.36)}px`,
+-        fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+-        fill: '#ffffff', stroke: 'rgba(160,40,80,0.3)', strokeThickness: 2,
+-      }).setOrigin(0.5).setDepth(16);
+-
+-      const hit = this.add.zone(cx, btnY, btnW, btnH).setInteractive().setDepth(17);
+-      hit.on('pointerdown', () => {
+-        this.tweens.add({ targets: [btn, btnLabel], scaleX: 0.95, scaleY: 0.95, duration: 80, yoyo: true });
+-        this.time.delayedCall(130, () => {
+-          this.cameras.main.fadeOut(280, 200, 100, 150);
+-          this.cameras.main.once('camerafadeoutcomplete', () =>
+-            this.scene.start('MapScene', { saveData: this.saveData })
+-          );
+-        });
+-      });
+-      hit.on('pointerover', () =>
+-        this.tweens.add({ targets: [btn, btnLabel], scaleX: 1.04, scaleY: 1.04, duration: 100 })
+-      );
+-      hit.on('pointerout', () =>
+-        this.tweens.add({ targets: [btn, btnLabel], scaleX: 1, scaleY: 1, duration: 100 })
+-      );
+-
+-      const pulse = this.add.graphics().setDepth(14);
+-      pulse.lineStyle(3, 0xff6eb4, 0.5);
+-      pulse.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
+-      this.tweens.add({ targets: pulse, scaleX: 1.06, scaleY: 1.3, alpha: 0, duration: 1200, repeat: -1 });
+-    }
++    });
++    hit.on('pointerover', () =>
++      this.tweens.add({ targets: [btn, btnLabel, leaves], scaleX: 1.05, scaleY: 1.05, duration: 100 })
++    );
++    hit.on('pointerout', () =>
++      this.tweens.add({ targets: [btn, btnLabel, leaves], scaleX: 1, scaleY: 1, duration: 100 })
++    );
++
++    const pulse = this.add.graphics().setDepth(14);
++    pulse.lineStyle(3, 0xffa801, 0.5);
++    pulse.strokeRoundedRect(cx - btnW / 2, btnY - btnH / 2, btnW, btnH, r);
++    this.tweens.add({ targets: pulse, scaleX: 1.06, scaleY: 1.3, alpha: 0, duration: 1200, repeat: -1 });
+   }
+ 
+   // 鈹€鈹€ 搴曢儴瀵艰埅鏍?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawNavBar(width, height, activeIndex = 0) {
+-    const hasBg = this.textures.exists('main_menu_bg');
+     const navH = height * 0.088;
+     const navY = height - navH - 2;
+ 
+@@ -279,50 +342,43 @@ export class MainMenuScene extends Phaser.Scene {
+       () => ModalSystem.showGlobalLeaderboardModal(this),
+     ];
+     const labels = ['棣栭〉', '鍦板浘', '瀹犵墿', '濂栧姳', '鎺掕'];
+-    const emojis = ['馃彔', '馃椇锔?, '馃惏', '馃巵', '馃弳'];
+-
+-    if (hasBg) {
+-      // 鑳屾櫙鍥惧凡鏈夊鑸爮瑙嗚 鈫?浠呴摵閫忔槑鐑尯锛堜笌鍘熷浘瀵归綈锛?-      const itemW = width / actions.length;
+-      actions.forEach((action, i) => {
+-        const cx = itemW * i + itemW / 2;
+-        const cy = height * 0.908;
+-        const hit = this.add.zone(cx, cy, itemW - 4, navH)
+-          .setInteractive().setDepth(83);
+-        hit.on('pointerdown', action);
+-      });
+-    } else {
+-      // 鏃犺儗鏅浘 鈫?缁樺埗瀹炰綋瀵艰埅鏍?-      const bg = this.add.graphics().setDepth(80);
+-      bg.fillStyle(0xffffff, 0.97);
+-      bg.fillRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
+-      bg.lineStyle(2.5, 0xffb3d9, 1);
+-      bg.strokeRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
+-
+-      const itemW = (width - 16) / actions.length;
+-      actions.forEach((action, i) => {
+-        const cx = 8 + itemW * i + itemW / 2;
+-        const cy = navY + 4 + (navH - 4) / 2;
+-
+-        if (i === activeIndex) {
+-          const pill = this.add.graphics().setDepth(81);
+-          pill.fillStyle(0xff6eb4, 1);
+-          pill.fillRoundedRect(cx - 28, cy - 20, 56, 40, 20);
+-        }
+-
+-        const labelColor = i === activeIndex ? '#ffffff' : '#b39ddb';
+-        this.add.text(cx, cy - 10, emojis[i], { fontSize: '19px' })
+-          .setOrigin(0.5).setDepth(82);
+-        this.add.text(cx, cy + 12, labels[i], {
+-          fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+-          fontStyle: 'bold', fill: labelColor,
+-        }).setOrigin(0.5).setDepth(82);
+-
+-        const hit = this.add.zone(cx, cy, itemW - 4, navH - 4)
+-          .setInteractive().setDepth(83);
+-        hit.on('pointerdown', action);
+-      });
+-    }
++    const navTextures = ['ui_nav_home', 'ui_nav_map', 'ui_nav_pet', 'ui_nav_gift', 'ui_nav_trophy'];
++
++    // 鎬绘槸缁樺埗瀹炰綋瀵艰埅鏍忎互鎼厤鏂版．鏋楄儗鏅浘
++    const bg = this.add.graphics().setDepth(80);
++    // 浣跨敤娓╂鼎鐨勫ザ鐧借壊閰嶆湪绮夎壊杈规锛屽畬缇庢惌閰嶆．鏋楅
++    bg.fillStyle(0xffffff, 0.94);
++    bg.fillRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
++    bg.lineStyle(2.5, 0xffb3d9, 1);
++    bg.strokeRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
++
++    const itemW = (width - 16) / actions.length;
++    actions.forEach((action, i) => {
++      const cx = 8 + itemW * i + itemW / 2;
++      const cy = navY + 4 + (navH - 4) / 2;
++
++      if (i === activeIndex) {
++        const pill = this.add.graphics().setDepth(81);
++        pill.fillStyle(0xff6eb4, 1);
++        pill.fillRoundedRect(cx - 28, cy - 20, 56, 40, 20);
++      }
++
++      const labelColor = i === activeIndex ? '#ffffff' : '#b39ddb';
++      
++      // 浣跨敤鍏ㄦ柊鐨勯珮鎷熺湡鐭㈤噺绾圭悊浠ｆ浛 flat Emojis
++      const icon = this.add.image(cx, cy - 8, navTextures[i])
++        .setDisplaySize(28, 28).setDepth(82);
++      icon.setAlpha(i === activeIndex ? 1 : 0.65);
++
++      this.add.text(cx, cy + 12, labels[i], {
++        fontSize: '9px', fontFamily: 'Nunito, sans-serif',
++        fontStyle: 'bold', fill: labelColor,
++      }).setOrigin(0.5).setDepth(82);
++
++      const hit = this.add.zone(cx, cy, itemW - 4, navH - 4)
++        .setInteractive().setDepth(83);
++      hit.on('pointerdown', action);
++    });
+   }
+ 
+   // 鈹€鈹€ 娴姩绮掑瓙瑁呴グ 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+diff --git a/src/scenes/MapScene.js b/src/scenes/MapScene.js
+index 41ea1de..998ad86 100644
+--- a/src/scenes/MapScene.js
++++ b/src/scenes/MapScene.js
+@@ -17,78 +17,28 @@ export class MapScene extends Phaser.Scene {
+ 
+   create() {
+     this.cameras.main.fadeIn(400);
+-    const chapter = CHAPTERS[this.currentChapter - 1];
+ 
+-    this._drawBackground(chapter);
++    this._drawBackground();
+     this._drawTopHUD();
+-    this._drawChapterBanner(chapter);
+-    this._drawLevelNodes(chapter);
+-    this._drawNavBar(1); // 鍦板浘鏍囩婵€娲?-    this._drawBackButton();
++    this._drawTitle(this.cameras.main.width, this.cameras.main.height);
++    this._drawLevelNodes();
+   }
+ 
+   // 鈹€鈹€ 鑳屾櫙 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+-  _drawBackground(chapter) {
++  _drawBackground() {
+     const { width, height } = this.cameras.main;
++    const textureKey = 'level_map_full';
+ 
+-    if (this.textures.exists('level_map_full')) {
+-      // 鍒嗗壊鍦板浘澶у浘绾圭悊甯?-      const texture = this.textures.get('level_map_full');
+-      if (texture && !texture.has('ch1')) texture.add('ch1', 0, 0, 0, 512, 1024);
+-      if (texture && !texture.has('ch2')) texture.add('ch2', 0, 512, 0, 512, 1024);
+-      const frame = chapter.id === 1 ? 'ch1' : 'ch2';
+-      const bg = this.add.image(width / 2, height / 2, 'level_map_full', frame);
+-      bg.setDisplaySize(width, height);
++    if (this.textures.exists(textureKey)) {
++      const bg = this.add.image(width / 2, height / 2, textureKey);
++      // 绛夋瘮渚嬬缉鏀撅紝濉弧楂樺害锛屽乏鍙宠鍓?(閬垮厤鐢婚潰鎷変几鍙樺舰)
++      const scale = Math.max(width / bg.width, height / bg.height);
++      bg.setScale(scale);
+     } else {
+       // 绋嬪簭鍖栬儗鏅?       const bg = this.add.graphics();
+-      const c1 = chapter.id === 1 ? 0xffecd2 : 0xd6eaff;
+-      const c2 = chapter.id === 1 ? 0xffd6f0 : 0xc3e0ff;
+-      bg.fillGradientStyle(c1, c1, c2, c2, 1);
++      bg.fillGradientStyle(0xffecd2, 0xffecd2, 0xffd6f0, 0xffd6f0, 1);
+       bg.fillRect(0, 0, width, height);
+-
+-      // 瑁呴グ璺緞
+-      const path = this.add.graphics();
+-      path.lineStyle(18, 0xffd43b, 0.4);
+-      path.beginPath();
+-      path.moveTo(width * 0.5, height * 0.85);
+-      path.lineTo(width * 0.3, height * 0.72);
+-      path.lineTo(width * 0.22, height * 0.6);
+-      path.lineTo(width * 0.3, height * 0.48);
+-      path.lineTo(width * 0.48, height * 0.4);
+-      path.lineTo(width * 0.65, height * 0.32);
+-      path.lineTo(width * 0.42, height * 0.22);
+-      path.lineTo(width * 0.24, height * 0.16);
+-      path.strokePath();
+-    }
+-
+-    this._drawFloatingDecorations(chapter);
+-  }
+-
+-  _drawFloatingDecorations(chapter) {
+-    const { width, height } = this.cameras.main;
+-    const navH = height * 0.088;
+-    const decorEmojis = {
+-      1: ['馃嵃', '馃', '馃嵀', '馃崿', '馃巶', '馃尭'],
+-      2: ['鉂勶笍', '鉀?, '馃尐锔?, '馃挋', '鉁?, '馃'],
+-    };
+-    const emojis = decorEmojis[chapter.id] || ['鉁?];
+-    for (let i = 0; i < 8; i++) {
+-      const x = Phaser.Math.Between(20, width - 20);
+-      const y = Phaser.Math.Between(130, height - navH - 100);
+-      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+-      const d = this.add.text(x, y, emoji, {
+-        fontSize: `${Phaser.Math.Between(14, 22)}px`,
+-      }).setAlpha(Phaser.Math.FloatBetween(0.2, 0.5)).setDepth(3);
+-      this.tweens.add({
+-        targets: d,
+-        y: y - Phaser.Math.Between(15, 30),
+-        rotation: Phaser.Math.FloatBetween(-0.2, 0.2),
+-        alpha: d.alpha * 0.3,
+-        duration: 2500 + Math.random() * 2500,
+-        yoyo: true, repeat: -1,
+-        delay: Math.random() * 1500,
+-      });
+     }
+   }
+ 
+@@ -96,152 +46,190 @@ export class MapScene extends Phaser.Scene {
+   _drawTopHUD() {
+     const { width, height } = this.cameras.main;
+     const d = this.saveData;
+-    const g = this.add.graphics().setDepth(20);
+-
+     const hudY = height * 0.016;
+-    const hudH = height * 0.068;
+-    const profW = width * 0.42;
+-
+-    // 鐜╁ Profile 鑳跺泭
+-    g.fillStyle(0xffffff, 0.97);
+-    g.lineStyle(2.5, 0xffb3d9, 1);
+-    g.fillRoundedRect(10, hudY, profW, hudH, hudH / 2);
+-    g.strokeRoundedRect(10, hudY, profW, hudH, hudH / 2);
+-
+-    const avatarSize = hudH * 0.78;
+-    const avatarX = 10 + hudH / 2;
+-    const avatarY = hudY + hudH / 2;
+-    g.fillStyle(0xffd6f0, 1);
+-    g.fillCircle(avatarX, avatarY, avatarSize / 2);
+-    g.lineStyle(2, 0xff6eb4, 1);
+-    g.strokeCircle(avatarX, avatarY, avatarSize / 2);
+-    this.add.text(avatarX, avatarY, '馃', {
+-      fontSize: `${Math.floor(avatarSize * 0.55)}px`,
+-    }).setOrigin(0.5).setDepth(21);
+-
+-    const lvlBg = this.add.graphics().setDepth(21);
+-    const lvlX = avatarX + avatarSize / 2 + 8;
+-    const lvlW = profW - avatarSize - 28;
+-    lvlBg.fillStyle(0x7950f2, 1);
+-    lvlBg.fillRoundedRect(lvlX, hudY + 6, lvlW * 0.42, hudH * 0.3, 6);
+-    this.add.text(lvlX + lvlW * 0.21, hudY + 6 + (hudH * 0.3) / 2,
+-      `Lv.${d.player.level}`, {
+-        fontSize: `${Math.floor(hudH * 0.21)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ffffff',
+-      }).setOrigin(0.5).setDepth(22);
+-
+-    this.add.text(lvlX, hudY + hudH * 0.5, d.player.name, {
+-      fontSize: `${Math.floor(hudH * 0.26)}px`, fontFamily: 'Nunito, sans-serif',
+-      fontStyle: 'bold', fill: '#5a2d82',
+-    }).setDepth(22);
+-
+-    // 鍙充笂瑙掕兌鍥?-    const rightH = height * 0.05;
+-    const rightY = hudY + (hudH - rightH) / 2;
+-    const pill1X = width * 0.638;
+-    const pill2X = width * 0.82;
+-    const pillW = width * 0.162;
+-
+-    g.fillStyle(0xffffff, 0.97);
+-    g.fillRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+-    g.strokeRoundedRect(pill1X, rightY, pillW, rightH, rightH / 2);
+-    this.add.text(pill1X + pillW / 2, rightY + rightH / 2,
+-      `鉂わ笍 ${d.player.hearts}`, {
+-        fontSize: `${Math.floor(rightH * 0.48)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ff4757',
+-      }).setOrigin(0.5).setDepth(21);
+-
+-    g.fillStyle(0xffffff, 0.97);
+-    g.fillRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+-    g.strokeRoundedRect(pill2X, rightY, pillW, rightH, rightH / 2);
+-    this.add.text(pill2X + pillW / 2, rightY + rightH / 2,
+-      `馃獧 ${d.player.coins}`, {
+-        fontSize: `${Math.floor(rightH * 0.44)}px`, fontFamily: 'Nunito, sans-serif',
+-        fontStyle: 'bold', fill: '#ff9f5a',
+-      }).setOrigin(0.5).setDepth(21);
+-
+-    // 鐐瑰嚮澶村儚鎵撳紑涓汉涓婚〉/鐧诲綍
+-    const profHit = this.add.zone(10 + profW / 2, hudY + hudH / 2, profW, hudH)
+-      .setInteractive().setDepth(23);
+-    profHit.on('pointerdown', () => {
+-      const logged = SaveSystem.getCurrentUser();
+-      if (logged) ModalSystem.showProfileModal(this, this.saveData);
+-      else ModalSystem.showAuthModal(this, this.saveData, 'login');
++    const hudH = Math.min(38, height * 0.05);
++
++    const margin = 8;
++    const gap = 6;
++    const gearSize = hudH * 1.1;
++
++    // 璁剧疆榻胯疆鎸夐挳 (鍙充笂瑙?
++    const gearX = width - margin - gearSize / 2;
++    const gearY = hudY + hudH / 2;
++
++    const gearBtn = this.add.image(gearX, gearY, 'ui_settings_btn')
++      .setDisplaySize(gearSize, gearSize)
++      .setDepth(20)
++      .setInteractive({ useHandCursor: true });
++
++    gearBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: gearBtn, scaleX: 0.88, scaleY: 0.88, duration: 80, yoyo: true });
++      this.time.delayedCall(100, () => {
++        ModalSystem.showNavigationSettingsModal(this, this.saveData);
++      });
+     });
+-  }
++    gearBtn.on('pointerover', () => this.tweens.add({ targets: gearBtn, scaleX: 1.08, scaleY: 1.08, duration: 80 }));
++    gearBtn.on('pointerout', () => this.tweens.add({ targets: gearBtn, scaleX: 1, scaleY: 1, duration: 80 }));
+ 
+-  // 鈹€鈹€ 绔犺妭鏍囬妯箙 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+-  _drawChapterBanner(chapter) {
+-    const { width, height } = this.cameras.main;
+-    const navH = height * 0.088;
+-    const bannerH = height * 0.055;
+-    const bannerY = height - navH - bannerH - 10;
++    // 璁＄畻涓変釜鑳跺泭鐨勫彲鐢ㄥ搴?(閲戝竵銆佹槦鏄熴€佷綋鍔?
++    const availableW = gearX - gearSize / 2 - margin - gap * 3;
++    const pillW = Math.floor(availableW / 3);
++
++    const coinX = margin;
++    const starX = coinX + pillW + gap;
++    const heartX = starX + pillW + gap;
++
++    // 缁熻鏄熸槦鎬绘暟
++    let totalStars = 0;
++    if (d.progress && d.progress.levelStars) {
++      totalStars = Object.values(d.progress.levelStars).reduce((sum, s) => sum + s, 0);
++    }
++
++    // 1. 閲戝竵鑳跺泭
++    this._drawHUDCapsule(coinX, hudY, pillW, hudH, 'ui_coin', `${d.player.coins}`, () => {
++      d.player.coins += 100;
++      SaveSystem.save(d);
++      this.scene.restart({ saveData: d });
++    });
++
++    // 2. 鏄熸槦鑳跺泭
++    this._drawHUDCapsule(starX, hudY, pillW, hudH, 'star_gold', `${totalStars}`, () => {
++      ModalSystem.showAchievementsModal(this);
++    });
+ 
++    // 3. 浣撳姏鑳跺泭
++    this._drawHUDCapsule(heartX, hudY, pillW, hudH, 'ui_heart', `${d.player.hearts}/5`, () => {
++      if (d.player.hearts < 5) {
++        d.player.hearts = 5;
++        SaveSystem.save(d);
++        this.scene.restart({ saveData: d });
++      }
++    });
++  }
++
++  _drawHUDCapsule(x, y, w, h, iconKey, valueText, onClickPlus) {
+     const g = this.add.graphics().setDepth(20);
+-    g.fillStyle(0xffffff, 0.96);
+-    g.fillRoundedRect(40, bannerY, width - 80, bannerH, 14);
+-    g.lineStyle(2.5, 0xffb3d9, 1);
+-    g.strokeRoundedRect(40, bannerY, width - 80, bannerH, 14);
+-
+-    this.add.text(width / 2, bannerY + bannerH / 2,
+-      `${chapter.emoji} 绗?{chapter.id}绔狅細${chapter.name}`, {
+-        fontSize: `${Math.floor(bannerH * 0.40)}px`,
+-        fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#5a2d82',
+-      }).setOrigin(0.5).setDepth(21);
++    g.fillStyle(0x000000, 0.08);
++    g.fillRoundedRect(x + 1.5, y + 2, w, h, h / 2);
++    g.fillStyle(0xfffbeb, 1);
++    g.fillRoundedRect(x, y, w, h, h / 2);
++    g.lineStyle(2.5, 0xfcd34d, 1);
++    g.strokeRoundedRect(x, y, w, h, h / 2);
++
++    const iconSize = h * 0.9;
++    const icon = this.add.image(x + h / 2 + 1, y + h / 2, iconKey)
++      .setDisplaySize(iconSize, iconSize)
++      .setDepth(21);
++
++    const textX = x + h + 2;
++    const text = this.add.text(textX, y + h / 2, valueText, {
++      fontSize: `${Math.floor(h * 0.38)}px`,
++      fontFamily: 'Nunito, sans-serif',
++      fontStyle: 'bold',
++      fill: '#5d4037',
++    }).setOrigin(0, 0.5).setDepth(21);
++
++    const plusSize = h * 0.85;
++    const plusBtn = this.add.image(x + w - plusSize / 2 - 2, y + h / 2, 'ui_plus_btn')
++      .setDisplaySize(plusSize, plusSize)
++      .setDepth(22)
++      .setInteractive({ useHandCursor: true });
++
++    plusBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: plusBtn, scaleX: 0.85, scaleY: 0.85, duration: 80, yoyo: true });
++      onClickPlus();
++    });
++
++    return [g, icon, text, plusBtn];
+   }
+ 
+-  // 鈹€鈹€ 鍏冲崱鑺傜偣 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+-  _drawLevelNodes(chapter) {
++  // 鈹€鈹€ 鏍囬 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++  _drawTitle(width, height) {
++    const titleY = height * 0.12;
++    const cx = width / 2;
++
++    const titleText = this.add.text(cx, titleY, 'HAPPY POP', {
++      fontSize: `${Math.floor(height * 0.046)}px`,
++      fontFamily: 'Outfit, Nunito, Arial, sans-serif',
++      fontStyle: 'bold',
++      fill: '#fbbf24',
++      stroke: '#5d4037',
++      strokeThickness: 6,
++      shadow: { color: '#3e2723', fill: true, offsetX: 2, offsetY: 3, blur: 0 }
++    }).setOrigin(0.5).setDepth(14);
++
++    this.tweens.add({
++      targets: titleText, scaleX: 1.04, scaleY: 1.04, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
++    });
++
++    const signW = 130;
++    const signH = 22;
++    const signY = titleY + height * 0.045;
++
++    const sign = this.add.graphics().setDepth(15);
++    sign.fillStyle(0x000000, 0.12);
++    sign.fillRoundedRect(cx - signW / 2 + 2, signY - signH / 2 + 2, signW, signH, 6);
++    sign.fillStyle(0x8d6e63, 1);
++    sign.fillRoundedRect(cx - signW / 2, signY - signH / 2, signW, signH, 6);
++    sign.lineStyle(1.8, 0xfbbf24, 1);
++    sign.strokeRoundedRect(cx - signW / 2, signY - signH / 2, signW, signH, 6);
++
++    this.add.text(cx, signY, `Chapter ${chapter.id}`, {
++      fontSize: '11px', fontFamily: 'Outfit, Nunito, Arial, sans-serif', fontStyle: 'bold', fill: '#ffffff',
++      stroke: '#4a2f1b', strokeThickness: 2.5
++    }).setOrigin(0.5).setDepth(16);
++  }
++  _drawLevelNodes() {
+     const { width, height } = this.cameras.main;
+     const maxUnlocked = this.saveData.progress.maxLevel;
+-    const positions = this._getLevelPositions(chapter.id);
+-
+-    for (let i = 0; i < 10; i++) {
+-      const levelId = chapter.levels[0] + i;
+-      const pos = positions[i];
+-      if (!pos) continue;
+-      const nodeX = width * pos.xPct;
+-      const nodeY = height * pos.yPct;
++
++    // 鏍规嵁鑳屾櫙鍥惧ぇ灏忔瘮渚嬫槧灏?+    const bgScale = Math.max(width / 1024, height / 1024);
++    const imgLeft = width / 2 - (1024 * bgScale) / 2;
++    const imgTop = height / 2 - (1024 * bgScale) / 2;
++
++    const positions = [
++      { x: 530, y: 885, color: 0x2ed573 },
++      { x: 630, y: 875, color: 0x2ed573 },
++      { x: 640, y: 770, color: 0xff4757 },
++      { x: 540, y: 760, color: 0x1e90ff },
++      { x: 440, y: 765, color: 0xff4757 },
++      { x: 375, y: 680, color: 0x1e90ff },
++      { x: 440, y: 615, color: 0xff4757 },
++      { x: 545, y: 600, color: 0x9c27b0 },
++      { x: 650, y: 605, color: 0xff9f43 },
++      { x: 625, y: 520, color: 0x1e90ff },
++      { x: 500, y: 500, color: 0x9c27b0 },
++      { x: 380, y: 505, color: 0x2ed573 },
++      { x: 345, y: 420, color: 0xff9f43 },
++      { x: 440, y: 355, color: 0xff9f43 },
++      { x: 560, y: 360, color: 0xff6b81 },
++      { x: 660, y: 345, color: 0x9c27b0 },
++      { x: 610, y: 250, color: 0xff4757 },
++      { x: 500, y: 230, color: 0xff9f43 },
++      { x: 400, y: 240, color: 0x2ed573 },
++      { x: 450, y: 140, color: 0x1e90ff },
++      { x: 560, y: 95, color: 0x1e90ff },
++    ];
++
++    positions.forEach((pos, idx) => {
++      const levelId = idx + 1;
++      const nodeX = imgLeft + pos.x * bgScale;
++      const nodeY = imgTop + pos.y * bgScale;
++
+       const stars = this.saveData.progress.levelStars[levelId] || 0;
+       const unlocked = levelId <= maxUnlocked;
+       const isCurrent = levelId === maxUnlocked;
+-      this._drawLevelNode(nodeX, nodeY, levelId, stars, unlocked, isCurrent);
+-    }
+-  }
+ 
+-  _getLevelPositions(chapterId) {
+-    if (chapterId === 1) {
+-      return [
+-        { xPct: 240 / 512, yPct: 800 / 1024 },
+-        { xPct: 150 / 512, yPct: 765 / 1024 },
+-        { xPct: 115 / 512, yPct: 680 / 1024 },
+-        { xPct: 150 / 512, yPct: 610 / 1024 },
+-        { xPct: 245 / 512, yPct: 560 / 1024 },
+-        { xPct: 330 / 512, yPct: 480 / 1024 },
+-        { xPct: 210 / 512, yPct: 400 / 1024 },
+-        { xPct: 120 / 512, yPct: 350 / 1024 },
+-        { xPct: 193 / 512, yPct: 260 / 1024 },
+-        { xPct: 285 / 512, yPct: 175 / 1024 },
+-      ];
+-    } else {
+-      return [
+-        { xPct: 245 / 512, yPct: 330 / 1024 },
+-        { xPct: 115 / 512, yPct: 435 / 1024 },
+-        { xPct: 260 / 512, yPct: 525 / 1024 },
+-        { xPct: 385 / 512, yPct: 590 / 1024 },
+-        { xPct: 193 / 512, yPct: 680 / 1024 },
+-        { xPct: 375 / 512, yPct: 755 / 1024 },
+-        { xPct: 136 / 512, yPct: 845 / 1024 },
+-        { xPct: 398 / 512, yPct: 870 / 1024 },
+-        { xPct: 205 / 512, yPct: 910 / 1024 },
+-        { xPct: 318 / 512, yPct: 950 / 1024 },
+-      ];
+-    }
++      this._drawLevelNode(nodeX, nodeY, levelId, stars, unlocked, isCurrent, pos.color);
++    });
++
++    this._placeAnimals(imgLeft, imgTop, bgScale);
+   }
+ 
+-  _drawLevelNode(x, y, levelId, stars, unlocked, isCurrent) {
++  _drawLevelNode(x, y, levelId, stars, unlocked, isCurrent, nodeColor) {
+     const { height } = this.cameras.main;
+-    const radius = isCurrent ? height * 0.037 : height * 0.028;
++    const radius = isCurrent ? height * 0.032 : height * 0.026;
+     const baseDepth = 30;
+ 
+     if (!unlocked) {
+@@ -250,144 +238,132 @@ export class MapScene extends Phaser.Scene {
+       node.fillCircle(x, y, radius);
+       node.lineStyle(3, 0xaaaaaa, 1);
+       node.strokeCircle(x, y, radius);
+-      this.add.text(x, y, '馃敀', {
+-        fontSize: `${Math.floor(radius * 1.0)}px`,
+-      }).setOrigin(0.5).setDepth(baseDepth + 1);
++      
++      this.add.image(x, y, 'ui_lock')
++        .setDisplaySize(radius * 1.3, radius * 1.3)
++        .setDepth(baseDepth + 1);
+       return;
+     }
+ 
+-    // 褰撳墠鍏冲崱鑴夊啿鍏夋檿
+     if (isCurrent) {
+       const glow = this.add.graphics().setDepth(baseDepth - 1);
+-      glow.fillStyle(0x448aff, 0.22);
++      glow.fillStyle(0xfff59d, 0.4);
+       glow.fillCircle(x, y, radius + 10);
+-      this.tweens.add({ targets: glow, scaleX: 1.22, scaleY: 1.22, alpha: 0.05, duration: 900, yoyo: true, repeat: -1 });
++      this.tweens.add({ targets: glow, scaleX: 1.25, scaleY: 1.25, alpha: 0, duration: 1000, repeat: -1 });
+     }
+ 
+-    // 鑺傜偣鑳屾櫙
+     const nodeBg = this.add.graphics().setDepth(baseDepth);
+-    nodeBg.fillStyle(stars > 0 ? 0x64b5f6 : 0x80cbc4, 1);
++    // 闃村奖
++    nodeBg.fillStyle(0x000000, 0.15);
++    nodeBg.fillCircle(x + 1.5, y + 2, radius);
++    
++    // 鍦嗗舰鑺傜偣
++    nodeBg.fillStyle(nodeColor, 1);
+     nodeBg.fillCircle(x, y, radius);
+-    nodeBg.lineStyle(isCurrent ? 4 : 3, isCurrent ? 0x0d47a1 : 0x00796b, 1);
++    nodeBg.lineStyle(isCurrent ? 4 : 2.5, 0xffffff, 1);
+     nodeBg.strokeCircle(x, y, radius);
+ 
++    // 鍐呴儴楂樺厜
++    nodeBg.fillStyle(0xffffff, 0.3);
++    nodeBg.fillEllipse(x - radius / 3, y - radius / 3, radius * 0.45, radius * 0.28);
++
+     // 鍏冲崱鍙?-    this.add.text(x, y - (stars > 0 ? radius * 0.18 : 0), `${levelId}`, {
+-      fontSize: `${Math.floor(radius * 1.05)}px`,
++    this.add.text(x, y, `${levelId}`, {
++      fontSize: `${Math.floor(radius * 0.95)}px`,
+       fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ffffff',
+     }).setOrigin(0.5).setDepth(baseDepth + 1);
+ 
+-    // 鏄熸槦
+-    if (stars > 0) {
+-      this.add.text(x, y + radius * 0.5, '猸?.repeat(stars), {
+-        fontSize: `${Math.floor(radius * 0.55)}px`,
+-      }).setOrigin(0.5).setDepth(baseDepth + 1);
+-    }
++    // 缁樺埗涓変釜鎷卞舰灏忔槦鏄?(濮嬬粓鍗犱綅)
++    const starY = y - radius - 8;
++    const starSize = radius * 0.52;
++    const starKeys = [
++      stars >= 1 ? 'star_gold' : 'star_gray',
++      stars >= 2 ? 'star_gold' : 'star_gray',
++      stars >= 3 ? 'star_gold' : 'star_gray',
++    ];
++    const offsets = [
++      { dx: -starSize * 1.1, dy: 3 },
++      { dx: 0, dy: 0 },
++      { dx: starSize * 1.1, dy: 3 }
++    ];
++    starKeys.forEach((key, sIdx) => {
++      const offset = offsets[sIdx];
++      this.add.image(x + offset.dx, starY + offset.dy, key)
++        .setDisplaySize(starSize, starSize)
++        .setDepth(baseDepth + 1);
++    });
+ 
+-    // 浜や簰鍖猴紙鏄庣‘璁剧疆 depth 纭繚鍙偣鍑伙級
++    // Level 鏂囨湰鏍囩
++    this.add.text(x, y + radius + 11, `Level ${levelId}`, {
++      fontSize: '8px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ffffff',
++      stroke: '#4a2f1b', strokeThickness: 3
++    }).setOrigin(0.5).setDepth(baseDepth + 1);
++
++    // 浜や簰鍖?     const hitArea = this.add.zone(x, y, (radius + 8) * 2, (radius + 8) * 2)
+       .setInteractive().setDepth(baseDepth + 2);
+     hitArea.on('pointerdown', () => this._showLevelStartModal(levelId));
+-    hitArea.on('pointerover', () =>
+-      this.tweens.add({ targets: nodeBg, scaleX: 1.12, scaleY: 1.12, duration: 100 })
+-    );
+-    hitArea.on('pointerout', () =>
+-      this.tweens.add({ targets: nodeBg, scaleX: 1, scaleY: 1, duration: 100 })
+-    );
+   }
+ 
+-  // 鈹€鈹€ 搴曢儴瀵艰埅鏍忥紙鎸夐渶缁樺埗锛夆攢鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+-  _drawNavBar(activeIndex = 1) {
+-    const { width, height } = this.cameras.main;
+-    const hasBg = this.textures.exists('level_map_full');
+-    const navH = height * 0.088;
+-    const navY = height - navH - 2;
+-
+-    const actions = [
+-      () => { this.cameras.main.fadeOut(220); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('MainMenuScene')); },
+-      () => {},  // 鍦板浘锛堝綋鍓嶏級
+-      () => { this.cameras.main.fadeOut(220); this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('PetScene', { saveData: this.saveData })); },
+-      () => ModalSystem.showDailyModal(this, this.saveData),
+-      () => ModalSystem.showGlobalLeaderboardModal(this),
++  _placeAnimals(imgLeft, imgTop, bgScale) {
++    const animalPositions = [
++      { key: 'ui_animal_bunny', x: 615, y: 395, scale: 0.38, isBunny: true },
++      { key: 'ui_animal_bunny', x: 310, y: 470, scale: 0.38, isBunny: true },
++      { key: 'ui_animal_frog',  x: 440, y: 520, scale: 0.38 },
++      { key: 'ui_animal_chick', x: 385, y: 450, scale: 0.38 },
++      { key: 'ui_animal_bear',  x: 500, y: 390, scale: 0.38 }
+     ];
+-    const labels = ['棣栭〉', '鍦板浘', '瀹犵墿', '濂栧姳', '鎺掕'];
+-    const emojis = ['馃彔', '馃椇锔?, '馃惏', '馃巵', '馃弳'];
+-
+-    if (hasBg) {
+-      // 鑳屾櫙鍥惧凡鏈夊鑸爮瑙嗚 鈫?浠呴摵閫忔槑鐑尯
+-      const itemW = width / actions.length;
+-      actions.forEach((action, i) => {
+-        const cx = itemW * i + itemW / 2;
+-        const cy = height * 0.908;
+-        const hit = this.add.zone(cx, cy, itemW - 4, navH)
+-          .setInteractive().setDepth(83);
+-        hit.on('pointerdown', action);
+-      });
+-    } else {
+-      // 鏃犺儗鏅浘 鈫?缁樺埗瀹炰綋瀵艰埅鏍?-      const bg = this.add.graphics().setDepth(80);
+-      bg.fillStyle(0xffffff, 0.97);
+-      bg.fillRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
+-      bg.lineStyle(2.5, 0xffb3d9, 1);
+-      bg.strokeRoundedRect(8, navY + 4, width - 16, navH - 4, 22);
+-
+-      const itemW = (width - 16) / actions.length;
+-      actions.forEach((action, i) => {
+-        const cx = 8 + itemW * i + itemW / 2;
+-        const cy = navY + 4 + (navH - 4) / 2;
+-
+-        if (i === activeIndex) {
+-          const pill = this.add.graphics().setDepth(81);
+-          pill.fillStyle(0xff6eb4, 1);
+-          pill.fillRoundedRect(cx - 28, cy - 20, 56, 40, 20);
+-        }
+-
+-        const labelColor = i === activeIndex ? '#ffffff' : '#b39ddb';
+-        this.add.text(cx, cy - 10, emojis[i], { fontSize: '19px' }).setOrigin(0.5).setDepth(82);
+-        this.add.text(cx, cy + 12, labels[i], {
+-          fontSize: '9px', fontFamily: 'Nunito, sans-serif',
+-          fontStyle: 'bold', fill: labelColor,
+-        }).setOrigin(0.5).setDepth(82);
+-
+-        const hit = this.add.zone(cx, cy, itemW - 4, navH - 4)
+-          .setInteractive().setDepth(83);
+-        hit.on('pointerdown', action);
++
++    animalPositions.forEach(p => {
++      const ax = imgLeft + p.x * bgScale;
++      const ay = imgTop + p.y * bgScale;
++      const animal = this.add.image(ax, ay, p.key)
++        .setDisplaySize(80 * p.scale, 80 * p.scale)
++        .setDepth(35);
++
++      this.tweens.add({
++        targets: animal,
++        y: ay - 6,
++        duration: 1000 + Math.random() * 500,
++        yoyo: true,
++        repeat: -1,
++        ease: 'Sine.easeInOut'
+       });
+-    }
+-  }
+ 
+-  // 鈹€鈹€ 杩斿洖鎸夐挳锛堜慨澶嶅眰绾э級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++      if (p.isBunny) {
++        animal.setInteractive({ useHandCursor: true });
++        animal.on('pointerdown', () => {
++          this.tweens.add({ targets: animal, scaleX: 1.2, scaleY: 1.2, duration: 100, yoyo: true });
++          this.time.delayedCall(150, () => {
++            this.cameras.main.fadeOut(220);
++            this.cameras.main.once('camerafadeoutcomplete', () => {
++              this.scene.start('PetScene', { saveData: this.saveData });
++            });
++          });
++        });
++      }
++    });
++  }
+   _drawBackButton() {
+     const { height } = this.cameras.main;
+     const hudH = height * 0.068;
+-    const btnY = height * 0.016 + hudH + 10;
+-    const btnH = height * 0.04;
+-    const btnW = 90;
+-
+-    // 鎸夐挳鑳屾櫙
+-    const btnBg = this.add.graphics().setDepth(50);
+-    btnBg.fillStyle(0x7950f2, 0.9);
+-    btnBg.fillRoundedRect(10, btnY, btnW, btnH, btnH / 2);
+-
+-    const btnLabel = this.add.text(10 + btnW / 2, btnY + btnH / 2, '鈫?杩斿洖', {
+-      fontSize: `${Math.floor(btnH * 0.45)}px`,
+-      fontFamily: 'Nunito, sans-serif', fontStyle: 'bold',
+-      fill: '#ffffff',
+-    }).setOrigin(0.5).setDepth(51);
+-
+-    // 鐐瑰嚮鍖哄煙锛堟槑纭珮 depth 纭繚涓嶈閬尅锛?-    const hit = this.add.zone(10 + btnW / 2, btnY + btnH / 2, btnW, btnH)
+-      .setInteractive().setDepth(52);
+-    hit.on('pointerdown', () => {
+-      this.tweens.add({ targets: [btnBg, btnLabel], scaleX: 0.95, scaleY: 0.95, duration: 80, yoyo: true });
++    const btnY = height * 0.016 + hudH + 8;
++    const btnSize = Math.max(34, Math.floor(height * 0.046));
++
++    // 浣跨敤鎴戜滑鍏ㄦ柊鐨勫渾褰㈣繑鍥炵澶寸汗鐞?ui_arrow_back
++    const btn = this.add.image(10 + btnSize / 2, btnY + btnSize / 2, 'ui_arrow_back')
++      .setDisplaySize(btnSize, btnSize).setDepth(51).setInteractive({ useHandCursor: true });
++
++    btn.on('pointerdown', () => {
++      this.tweens.add({ targets: btn, scaleX: 0.93, scaleY: 0.93, duration: 80, yoyo: true });
+       this.cameras.main.fadeOut(220);
+       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('MainMenuScene'));
+     });
+-    hit.on('pointerover', () =>
+-      this.tweens.add({ targets: btnBg, scaleX: 1.05, scaleY: 1.05, duration: 80 })
++    btn.on('pointerover', () =>
++      this.tweens.add({ targets: btn, scaleX: 1.08, scaleY: 1.08, duration: 80 })
+     );
+-    hit.on('pointerout', () =>
+-      this.tweens.add({ targets: btnBg, scaleX: 1, scaleY: 1, duration: 80 })
++    btn.on('pointerout', () =>
++      this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 })
+     );
+   }
+ 
+diff --git a/src/scenes/PetScene.js b/src/scenes/PetScene.js
+index 25d6c46..46e1584 100644
+--- a/src/scenes/PetScene.js
++++ b/src/scenes/PetScene.js
+@@ -29,6 +29,7 @@ export class PetScene extends Phaser.Scene {
+     this._drawTopHUD(width, height);
+     this._drawStatusPanel(width, height);
+     this._drawEvolutionPanel(width, height);
++    this._drawPetBanner(width, height);        // 瀹犵墿鐘舵€佹í骞?     this._drawPetCharacter(width, height);
+     this._drawActionButtons(width, height);   // 鈫?涓変釜鍔熻兘鎸夐挳
+     this._drawNavBar(width, height);           // 鈫?搴曢儴瀵艰埅鏍忥紙鍚繑鍥炰富椤碉級
+@@ -57,64 +58,151 @@ export class PetScene extends Phaser.Scene {
+     }
+   }
+ 
+-  // 鈹€鈹€ 椤堕儴瀹犵墿 HUD 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
++  // 鈹€鈹€ 椤堕儴 HUD 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawTopHUD(width, height) {
++    const d = this.saveData;
++    const hudY = height * 0.016;
++    const hudH = Math.min(38, height * 0.05);
++
++    const margin = 8;
++    const gap = 6;
++    const gearSize = hudH * 1.1;
++
++    // 璁剧疆榻胯疆鎸夐挳 (鍙充笂瑙?
++    const gearX = width - margin - gearSize / 2;
++    const gearY = hudY + hudH / 2;
++
++    const gearBtn = this.add.image(gearX, gearY, 'ui_settings_btn')
++      .setDisplaySize(gearSize, gearSize)
++      .setDepth(20)
++      .setInteractive({ useHandCursor: true });
++
++    gearBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: gearBtn, scaleX: 0.88, scaleY: 0.88, duration: 80, yoyo: true });
++      this.time.delayedCall(100, () => {
++        ModalSystem.showNavigationSettingsModal(this, this.saveData);
++      });
++    });
++    gearBtn.on('pointerover', () => this.tweens.add({ targets: gearBtn, scaleX: 1.08, scaleY: 1.08, duration: 80 }));
++    gearBtn.on('pointerout', () => this.tweens.add({ targets: gearBtn, scaleX: 1, scaleY: 1, duration: 80 }));
++
++    // 璁＄畻涓変釜鑳跺泭鐨勫彲鐢ㄥ搴?(閲戝竵銆佹槦鏄熴€佷綋鍔?
++    const availableW = gearX - gearSize / 2 - margin - gap * 3;
++    const pillW = Math.floor(availableW / 3);
++
++    const coinX = margin;
++    const starX = coinX + pillW + gap;
++    const heartX = starX + pillW + gap;
++
++    // 缁熻鏄熸槦鎬绘暟
++    let totalStars = 0;
++    if (d.progress && d.progress.levelStars) {
++      totalStars = Object.values(d.progress.levelStars).reduce((sum, s) => sum + s, 0);
++    }
++
++    // 1. 閲戝竵鑳跺泭
++    this._drawHUDCapsule(coinX, hudY, pillW, hudH, 'ui_coin', `${d.player.coins}`, () => {
++      d.player.coins += 100;
++      SaveSystem.save(d);
++      this.scene.restart({ saveData: d });
++    });
++
++    // 2. 鏄熸槦鑳跺泭
++    this._drawHUDCapsule(starX, hudY, pillW, hudH, 'star_gold', `${totalStars}`, () => {
++      ModalSystem.showAchievementsModal(this);
++    });
++
++    // 3. 浣撳姏鑳跺泭
++    this._drawHUDCapsule(heartX, hudY, pillW, hudH, 'ui_heart', `${d.player.hearts}/5`, () => {
++      if (d.player.hearts < 5) {
++        d.player.hearts = 5;
++        SaveSystem.save(d);
++        this.scene.restart({ saveData: d });
++      }
++    });
++  }
++
++  _drawHUDCapsule(x, y, w, h, iconKey, valueText, onClickPlus) {
++    const g = this.add.graphics().setDepth(20);
++    g.fillStyle(0x000000, 0.08);
++    g.fillRoundedRect(x + 1.5, y + 2, w, h, h / 2);
++    g.fillStyle(0xfffbeb, 1);
++    g.fillRoundedRect(x, y, w, h, h / 2);
++    g.lineStyle(2.5, 0xfcd34d, 1);
++    g.strokeRoundedRect(x, y, w, h, h / 2);
++
++    const iconSize = h * 0.9;
++    const icon = this.add.image(x + h / 2 + 1, y + h / 2, iconKey)
++      .setDisplaySize(iconSize, iconSize)
++      .setDepth(21);
++
++    const textX = x + h + 2;
++    const text = this.add.text(textX, y + h / 2, valueText, {
++      fontSize: `${Math.floor(h * 0.38)}px`,
++      fontFamily: 'Nunito, sans-serif',
++      fontStyle: 'bold',
++      fill: '#5d4037',
++    }).setOrigin(0, 0.5).setDepth(21);
++
++    const plusSize = h * 0.85;
++    const plusBtn = this.add.image(x + w - plusSize / 2 - 2, y + h / 2, 'ui_plus_btn')
++      .setDisplaySize(plusSize, plusSize)
++      .setDepth(22)
++      .setInteractive({ useHandCursor: true });
++
++    plusBtn.on('pointerdown', () => {
++      this.tweens.add({ targets: plusBtn, scaleX: 0.85, scaleY: 0.85, duration: 80, yoyo: true });
++      onClickPlus();
++    });
++
++    return [g, icon, text, plusBtn];
++  }
++
++  _drawPetBanner(width, height) {
+     const pet = this.saveData.pet;
+     const cx  = width / 2;
+-    const hudH = height * 0.09;
+-    const hudW = width * 0.62;
+-    const hudY = 10;
++    const bannerY = height * 0.385;
++    const bannerW = width * 0.76;
++    const bannerH = 48;
+ 
+     const g = this.add.graphics().setDepth(10);
+-    g.fillStyle(0xffffff, 0.96);
+-    g.lineStyle(2.5, 0xffb3d9, 1);
+-    g.fillRoundedRect(cx - hudW / 2, hudY, hudW, hudH, 20);
+-    g.strokeRoundedRect(cx - hudW / 2, hudY, hudW, hudH, 20);
+-
+-    // 鍚嶅瓧
+-    this.add.text(cx - 20, hudY + hudH * 0.28,
+-      `馃惏 ${pet.name}`, {
+-        fontSize: `${Math.floor(hudH * 0.26)}px`,
+-        fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
+-      }).setOrigin(0.5).setDepth(11);
+-
+-    // 绛夌骇寰界珷
+-    const lvlBg = this.add.graphics().setDepth(11);
+-    const lvlX  = cx + hudW * 0.22;
+-    lvlBg.fillStyle(0xffd43b, 1);
+-    lvlBg.fillRoundedRect(lvlX, hudY + 8, 46, 20, 10);
+-    this.add.text(lvlX + 23, hudY + 18, `Lv.${pet.level}`, {
+-      fontSize: '11px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#8a5a00',
+-    }).setOrigin(0.5).setDepth(12);
++    g.fillStyle(0x000000, 0.12);
++    g.fillRoundedRect(cx - bannerW / 2 + 2, bannerY + 2, bannerW, bannerH, 12);
++    g.fillStyle(0x8d6e63, 1);
++    g.fillRoundedRect(cx - bannerW / 2, bannerY, bannerW, bannerH, 12);
++    g.lineStyle(2, 0xfbbf24, 1);
++    g.strokeRoundedRect(cx - bannerW / 2, bannerY, bannerW, bannerH, 12);
++
++    this.add.text(cx, bannerY + 12, `馃惏 ${pet.name} (Lv.${pet.level})`, {
++      fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ffffff',
++    }).setOrigin(0.5).setDepth(11);
+ 
+-    // EXP 杩涘害鏉?-    const expPct = (pet.exp % PET_CONFIG.expPerLevel) / PET_CONFIG.expPerLevel;
+-    const barX   = cx - hudW / 2 + 16;
+-    const barY   = hudY + hudH * 0.64;
+-    const barW   = hudW - 32;
+-    const barH   = 9;
++    const barX = cx - bannerW / 2 + 20;
++    const barY = bannerY + 28;
++    const barW = bannerW - 40;
++    const barH = 7;
++    const expPct = (pet.exp % 100) / 100;
+ 
+-    const barBg = this.add.graphics().setDepth(11);
+-    barBg.fillStyle(0xe9d8f4, 1);
+-    barBg.fillRoundedRect(barX, barY, barW, barH, 5);
++    const track = this.add.graphics().setDepth(11);
++    track.fillStyle(0x3e2723, 1);
++    track.fillRoundedRect(barX, barY, barW, barH, 3.5);
+ 
+-    const barFill = this.add.graphics().setDepth(11);
+-    barFill.fillStyle(0xc77dff, 1);
+-    barFill.fillRoundedRect(barX, barY, Math.max(10, barW * expPct), barH, 5);
++    const fill = this.add.graphics().setDepth(12);
++    fill.fillStyle(0xffb3d9, 1);
++    fill.fillRoundedRect(barX, barY, Math.max(6, barW * expPct), barH, 3.5);
+ 
+-    this.add.text(cx, barY + barH + 7,
+-      `EXP: ${pet.exp % PET_CONFIG.expPerLevel} / ${PET_CONFIG.expPerLevel}`, {
+-        fontSize: '9px', fontFamily: 'Nunito', fill: '#9b59b6',
+-      }).setOrigin(0.5).setDepth(11);
++    this.add.text(cx, barY + barH + 7, `EXP: ${pet.exp % 100} / 100`, {
++      fontSize: '8px', fontFamily: 'Nunito, sans-serif', fill: '#ffd6e7',
++    }).setOrigin(0.5).setDepth(12);
+   }
+ 
+   // 鈹€鈹€ 宸︿晶鐘舵€侀潰鏉?鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawStatusPanel(width, height) {
+     const pet  = this.saveData.pet;
+     const bars = [
+-      { label: '馃崜 楗遍', value: pet.hunger, color: 0xff6b81 },
+-      { label: '馃泚 娓呮磥', value: pet.clean,  color: 0x4db6ff },
+-      { label: '馃寛 蹇冩儏', value: pet.mood,   color: 0xffd43b },
++      { id: 'hunger', label: '    楗遍', value: pet.hunger, color: 0xff6b81 },
++      { id: 'clean',  label: '    娓呮磥', value: pet.clean,  color: 0x4db6ff },
++      { id: 'mood',   label: '    蹇冩儏', value: pet.mood,   color: 0xffd43b },
+     ];
+ 
+     const panelX = 12;
+@@ -142,6 +230,15 @@ export class PetScene extends Phaser.Scene {
+         fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
+       }).setDepth(11);
+ 
++      // 缁樺埗鐘舵€佸皬鍥炬爣
++      if (bar.id === 'hunger') {
++        this.add.image(panelX + 16, iy + 7, 'tile_strawberry').setDisplaySize(12, 12).setDepth(12);
++      } else if (bar.id === 'mood') {
++        this.add.image(panelX + 16, iy + 7, 'star_gold').setDisplaySize(12, 12).setDepth(12);
++      } else if (bar.id === 'clean') {
++        this.add.image(panelX + 16, iy + 7, 'ui_status_drop').setDisplaySize(13, 13).setDepth(12);
++      }
++
+       const track = this.add.graphics().setDepth(11);
+       track.fillStyle(0xf0e6ff, 1);
+       track.fillRoundedRect(panelX + 10, iy + 16, tw, 7, 4);
+@@ -213,7 +310,7 @@ export class PetScene extends Phaser.Scene {
+ 
+     if (bunnyKey) {
+       this.petSprite = this.add.image(cx, charY, bunnyKey)
+-        .setScale(Math.min(width / 300, 1.5)).setDepth(5);
++        .setScale(Math.min(width / 400, 0.9)).setDepth(5);
+       this.tweens.add({
+         targets: this.petSprite,
+         scaleY: this.petSprite.scaleY * 0.95,
+@@ -239,9 +336,9 @@ export class PetScene extends Phaser.Scene {
+   // 鈹€鈹€ 涓変釜鍔熻兘鎸夐挳锛堝缁堟樉寮忕粯鍒讹級鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+   _drawActionButtons(width, height) {
+     const btnDefs = [
+-      { id: 'feed', x: width * 0.18, emoji: '馃崜', label: '鍠傞', c1: 0xff6b81, c2: 0xff9eb5 },
+-      { id: 'bath', x: width * 0.50, emoji: '馃泚', label: '娲楁尽', c1: 0x4db6ff, c2: 0x74c0fc },
+-      { id: 'play', x: width * 0.82, emoji: '馃幃', label: '鐜╄€?, c1: 0xffd43b, c2: 0xffe57c },
++      { id: 'feed', x: width * 0.18, label: '鍠傞', c1: 0xff6b81, c2: 0xff9eb5 },
++      { id: 'bath', x: width * 0.50, label: '娲楁尽', c1: 0x4db6ff, c2: 0x74c0fc },
++      { id: 'play', x: width * 0.82, label: '鐜╄€?, c1: 0xffd43b, c2: 0xffe57c },
+     ];
+ 
+     const btnY = this.BTN_Y;
+@@ -266,8 +363,15 @@ export class PetScene extends Phaser.Scene {
+       btn.fillEllipse(def.x, btnY - btnH / 4, btnW * 0.6, btnH * 0.38);
+ 
+       // 鍥炬爣 + 鏂囧瓧
+-      const icon = this.add.text(def.x, btnY - 7, def.emoji, { fontSize: '20px' })
+-        .setOrigin(0.5).setDepth(22);
++      let iconObj;
++      if (def.id === 'feed') {
++        iconObj = this.add.image(def.x, btnY - 7, 'tile_strawberry').setDisplaySize(24, 24).setDepth(22);
++      } else if (def.id === 'play') {
++        iconObj = this.add.image(def.x, btnY - 7, 'star_gold').setDisplaySize(24, 24).setDepth(22);
++      } else {
++        iconObj = this.add.image(def.x, btnY - 7, 'ui_status_drop').setDisplaySize(24, 24).setDepth(22);
++      }
++
+       const lbl  = this.add.text(def.x, btnY + 12, def.label, {
+         fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
+       }).setOrigin(0.5).setDepth(22);
+@@ -278,16 +382,16 @@ export class PetScene extends Phaser.Scene {
+ 
+       hit.on('pointerdown', () => {
+         this.tweens.add({
+-          targets: [btn, icon, lbl],
++          targets: [btn, iconObj, lbl],
+           scaleX: 0.93, scaleY: 0.93, duration: 90, yoyo: true,
+         });
+         this.time.delayedCall(120, () => this._petAction(def.id));
+       });
+       hit.on('pointerover', () =>
+-        this.tweens.add({ targets: [btn, icon, lbl], scaleX: 1.06, scaleY: 1.06, duration: 80 })
++        this.tweens.add({ targets: [btn, iconObj, lbl], scaleX: 1.06, scaleY: 1.06, duration: 80 })
+       );
+       hit.on('pointerout', () =>
+-        this.tweens.add({ targets: [btn, icon, lbl], scaleX: 1, scaleY: 1, duration: 80 })
++        this.tweens.add({ targets: [btn, iconObj, lbl], scaleX: 1, scaleY: 1, duration: 80 })
+       );
+     });
+   }
+@@ -306,7 +410,7 @@ export class PetScene extends Phaser.Scene {
+ 
+     const navItems = [
+       {
+-        emoji: '馃彔', label: '棣栭〉',
++        label: '棣栭〉',
+         action: () => {
+           this._hideModal();
+           this.cameras.main.fadeOut(220);
+@@ -316,7 +420,7 @@ export class PetScene extends Phaser.Scene {
+         },
+       },
+       {
+-        emoji: '馃椇锔?, label: '鍦板浘',
++        label: '鍦板浘',
+         action: () => {
+           this._hideModal();
+           this.cameras.main.fadeOut(220);
+@@ -325,11 +429,12 @@ export class PetScene extends Phaser.Scene {
+           );
+         },
+       },
+-      { emoji: '馃惏', label: '瀹犵墿',  action: () => {} },  // 褰撳墠椤?-      { emoji: '馃巵', label: '濂栧姳',  action: () => ModalSystem.showDailyModal(this, this.saveData) },
+-      { emoji: '馃弳', label: '鎺掕',  action: () => ModalSystem.showGlobalLeaderboardModal(this) },
++      { label: '瀹犵墿',  action: () => {} },  // 褰撳墠椤?+      { label: '濂栧姳',  action: () => ModalSystem.showDailyModal(this, this.saveData) },
++      { label: '鎺掕',  action: () => ModalSystem.showGlobalLeaderboardModal(this) },
+     ];
+ 
++    const navTextures = ['ui_nav_home', 'ui_nav_map', 'ui_nav_pet', 'ui_nav_gift', 'ui_nav_trophy'];
+     const ACTIVE = 2;  // 瀹犵墿 tab
+     const itemW  = (width - 16) / navItems.length;
+ 
+@@ -345,8 +450,11 @@ export class PetScene extends Phaser.Scene {
+       }
+ 
+       const col = i === ACTIVE ? '#ffffff' : '#b39ddb';
+-      this.add.text(cx, cy - 10, item.emoji, { fontSize: '19px' })
+-        .setOrigin(0.5).setDepth(82);
++      
++      const icon = this.add.image(cx, cy - 8, navTextures[i])
++        .setDisplaySize(28, 28).setDepth(82);
++      icon.setAlpha(i === ACTIVE ? 1 : 0.65);
++
+       this.add.text(cx, cy + 12, item.label, {
+         fontSize: '9px', fontFamily: 'Nunito', fontStyle: 'bold', fill: col,
+       }).setOrigin(0.5).setDepth(82);
+@@ -450,5 +558,11 @@ export class PetScene extends Phaser.Scene {
+     });
+   }
+ 
++  _hideModal() {
++    ModalSystem.hideModal();
++    const modal = document.getElementById('game-modal');
++    if (modal) modal.remove();
++  }
++
+   shutdown()   { ModalSystem.hideModal(); }
+ }
+diff --git a/src/style.css b/src/style.css
+index 2d3f1d9..5967cfe 100644
+--- a/src/style.css
++++ b/src/style.css
+@@ -130,9 +130,9 @@ html, body {
+ .game-modal-overlay {
+   position: fixed;
+   inset: 0;
+-  background: rgba(90, 45, 130, 0.55);
+-  backdrop-filter: blur(6px);
+-  -webkit-backdrop-filter: blur(6px);
++  background: rgba(90, 45, 130, 0.45);
++  backdrop-filter: blur(8px);
++  -webkit-backdrop-filter: blur(8px);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+@@ -141,23 +141,42 @@ html, body {
+ }
+ 
+ .game-modal {
+-  background: linear-gradient(160deg, #fff8fe 0%, #ffffff 100%);
++  position: relative;
++  background: linear-gradient(160deg, #fffefc 0%, #fff6f8 100%);
+   border-radius: var(--radius-xl);
+   padding: 32px 28px 28px;
+-  width: 320px;
++  width: 330px;
+   max-width: 90vw;
+   text-align: center;
+   box-shadow:
+     0 24px 64px rgba(90,45,130,0.22),
+-    0 0 0 3px var(--pink-main),
+-    0 0 0 6px rgba(255,110,180,0.18);
++    0 0 0 4px #ffb3d9,
++    0 0 0 8px rgba(46, 213, 115, 0.22);
++  border: 2px dashed #ff88b8;
+   animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+ }
++.game-modal::before {
++  content: '馃崈';
++  position: absolute;
++  top: -12px;
++  left: -12px;
++  font-size: 28px;
++  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
++}
++.game-modal::after {
++  content: '馃尭';
++  position: absolute;
++  bottom: -12px;
++  right: -12px;
++  font-size: 28px;
++  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
++}
+ 
+ .modal-title {
+-  font-size: 1.55rem;
++  font-size: 1.6rem;
+   font-weight: 900;
+   color: var(--text-dark);
++  text-shadow: 0 2px 0 #ffffff, 0 4px 12px rgba(255,110,180,0.2);
+   margin-bottom: 14px;
+ }
+ 
+@@ -192,54 +211,59 @@ html, body {
+   display: inline-block;
+   padding: 13px 30px;
+   border-radius: 50px;
+-  border: none;
++  border: 2px solid #ffffff;
+   font-family: 'Nunito', sans-serif;
+-  font-size: 1.05rem;
++  font-size: 1.02rem;
+   font-weight: 800;
+   cursor: pointer;
+-  transition: transform 0.12s, box-shadow 0.12s;
+-  margin: 5px;
++  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
++  margin: 6px;
+   letter-spacing: 0.5px;
+ }
+ .modal-btn:active { transform: scale(0.95); }
+ 
+ .btn-primary {
+-  background: linear-gradient(135deg, var(--pink-main), var(--orange-warm));
+-  color: white;
+-  box-shadow: 0 6px 20px rgba(255,110,180,0.5);
++  background: linear-gradient(135deg, #ffd32a, #ffa801);
++  color: #7d5200;
++  box-shadow: 0 6px 20px rgba(255,168,1,0.35), inset 0 2px 4px rgba(255,255,255,0.6);
++}
++.btn-primary:hover {
++  transform: translateY(-2px);
++  box-shadow: 0 8px 28px rgba(255,168,1,0.5);
++  background: linear-gradient(135deg, #ffa801, #ff5e57);
++  color: #ffffff;
+ }
+-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(255,110,180,0.6); }
+ 
+ .btn-secondary {
+-  background: linear-gradient(135deg, var(--purple-soft), var(--blue-sky));
++  background: linear-gradient(135deg, #2ed573, #20bf6b);
+   color: white;
+-  box-shadow: 0 6px 20px rgba(199,125,255,0.4);
++  box-shadow: 0 6px 20px rgba(46,213,115,0.35), inset 0 2px 4px rgba(255,255,255,0.5);
+ }
+-.btn-secondary:hover { transform: translateY(-2px); }
++.btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(46,213,115,0.45); }
+ 
+ .btn-outline {
+   background: white;
+   color: var(--text-dark);
+   border: 2.5px solid var(--pink-light);
+-  box-shadow: 0 4px 12px rgba(255,110,180,0.15);
++  box-shadow: 0 4px 12px rgba(255,110,180,0.12);
+ }
+-.btn-outline:hover { background: var(--pink-pale); }
++.btn-outline:hover { background: var(--pink-pale); border-color: var(--pink-main); }
+ 
+ /* 鐧诲綍/娉ㄥ唽琛ㄥ崟杈撳叆妗?*/
+ .modal-input {
+-  padding: 10px 14px;
+-  border-radius: 12px;
+-  border: 2px solid #ffb3d9;
++  padding: 12px 16px;
++  border-radius: 14px;
++  border: 2.5px solid #ffb3d9;
+   font-family: 'Nunito', sans-serif;
+   font-size: 0.95rem;
+   outline: none;
+-  transition: border-color 0.15s;
++  transition: border-color 0.15s, box-shadow 0.15s;
+   width: 100%;
+   box-sizing: border-box;
+ }
+ .modal-input:focus {
+   border-color: #ff6eb4;
+-  box-shadow: 0 0 0 3px rgba(255,110,180,0.18);
++  box-shadow: 0 0 0 4px rgba(255,110,180,0.15);
+ }
+ 
+ /* =============================================
+diff --git a/src/utils/Board.js b/src/utils/Board.js
+index a4f6254..b65a2c8 100644
+--- a/src/utils/Board.js
++++ b/src/utils/Board.js
+@@ -20,7 +20,7 @@ export class Board {
+     this.stepSize = this.tileSize + this.gap;
+ 
+     this.totalW = this.cols * this.stepSize - this.gap;
+-    this.boardX = (BOARD_CONFIG.width || 450 - this.totalW) / 2 + BOARD_CONFIG.boardPaddingX;
++    this.boardX = levelData.boardX !== undefined ? levelData.boardX : ((BOARD_CONFIG.width || 450) - this.totalW) / 2 + BOARD_CONFIG.boardPaddingX;
+     this.boardY = BOARD_CONFIG.boardOffsetY;
+ 
+     this.grid = [];        // 2D array of tile objects
+@@ -136,30 +136,31 @@ export class Board {
+     const tileType = TILE_TYPES[tile.typeId];
+     const container = scene.add.container(x, y);
+ 
+-    // 1. 濂舵补鐧藉崟鍏冩牸鑳屾櫙 (缁熶竴搴曡壊锛岀獊鍑哄僵鑹叉按鏋?
++    // 1. 濂舵补鐧藉崟鍏冩牸鑳屾櫙 (妫灄鍦嗘鼎杞洏椋庢牸)
+     const bg = scene.add.graphics();
+-    bg.fillStyle(0xfffdfa, 1);
+-    bg.fillRoundedRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4, 12);
++    bg.fillStyle(0xfffef9, 0.97);
++    bg.fillRoundedRect(-size/2 + 1.5, -size/2 + 1.5, size - 3, size - 3, 14);
++    
+     // 鍐呯疆鍦嗘鼎鐧介珮鍏?-    bg.fillStyle(0xffffff, 0.6);
++    bg.fillStyle(0xffffff, 0.5);
+     bg.fillEllipse(-size/6, -size/4, size/2.5, size/4.5);
+ 
+-    // 2. 娓╂殩鐨勬祬绮夋鎻忚竟
++    // 2. 娓╂殩鐨勬祬绮夋鏈ㄨ川鎻忚竟
+     const border = scene.add.graphics();
+     border.lineStyle(2.5, 0xffdcb9, 1);
+-    border.strokeRoundedRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4, 12);
++    border.strokeRoundedRect(-size/2 + 1.5, -size/2 + 1.5, size - 3, size - 3, 14);
+ 
+-    // 3. 姘存灉/瀹濈煶 Emojis 灞呬腑灞曠ず
+-    const emoji = scene.add.text(0, 1, tileType.emoji, {
+-      fontSize: `${Math.floor(size * 0.58)}px`,
+-    }).setOrigin(0.5, 0.5);
++    // 3. 姘存灉/瀹濈煶楂樹繚鐪熷浘鐗囧眳涓睍绀?+    const textureKey = scene.textures.exists(tileType.key) ? tileType.key : 'star_gold';
++    const fruitSprite = scene.add.image(0, 0, textureKey);
++    fruitSprite.setDisplaySize(size - 8, size - 8);
+ 
+     // 4. 鐗规畩鏂瑰潡鏍囪瑁呴グ
+     if (tile.special) {
+       const specialIndicator = this._makeSpecialIndicator(scene, tile.special, size);
+-      container.add([bg, border, emoji, specialIndicator]);
++      container.add([bg, border, fruitSprite, specialIndicator]);
+     } else {
+-      container.add([bg, border, emoji]);
++      container.add([bg, border, fruitSprite]);
+     }
+ 
+     container.setSize(size, size);
+diff --git a/src/utils/ModalSystem.js b/src/utils/ModalSystem.js
+index c6c9498..79fa79f 100644
+--- a/src/utils/ModalSystem.js
++++ b/src/utils/ModalSystem.js
+@@ -311,4 +311,126 @@ export class ModalSystem {
+       listContainer.textContent = '鈿狅笍 鍔犺浇澶辫触锛岃绋嶅悗閲嶈瘯';
+     }
+   }
++
++  /**
++   * 娓告垙瀵艰埅鑿滃崟寮圭獥 (Image 2 璁剧疆鑿滃崟)
++   */
++  static showNavigationSettingsModal(scene, saveData) {
++    this.hideModal();
++    const overlay = document.createElement('div');
++    overlay.className = 'game-modal-overlay';
++    overlay.id = 'game-modal';
++
++    const modal = document.createElement('div');
++    modal.className = 'game-modal';
++    modal.style.width = '300px';
++
++    const h = document.createElement('div');
++    h.className = 'modal-title';
++    h.textContent = '鈿欙笍 娓告垙鑿滃崟';
++
++    const content = document.createElement('div');
++    content.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin:14px 0;';
++
++    // 闊充箰寮€鍏崇姸鎬?+    const musicOn = localStorage.getItem('joypop_bgm') !== 'off';
++    const musicBtn = document.createElement('button');
++    musicBtn.className = 'modal-btn btn-secondary';
++    musicBtn.textContent = musicOn ? '馃幍 鑳屾櫙闊充箰锛氬紑鍚? : '馃攪 鑳屾櫙闊充箰锛氬叧闂?;
++    musicBtn.onclick = () => {
++      const nextState = localStorage.getItem('joypop_bgm') === 'off' ? 'on' : 'off';
++      localStorage.setItem('joypop_bgm', nextState);
++      musicBtn.textContent = nextState === 'on' ? '馃幍 鑳屾櫙闊充箰锛氬紑鍚? : '馃攪 鑳屾櫙闊充箰锛氬叧闂?;
++      if (nextState === 'on') {
++        scene.sound.play('bgm_menu', { loop: true, volume: 0.5 });
++      } else {
++        scene.sound.stopByKey('bgm_menu');
++        scene.sound.stopAll();
++      }
++    };
++    content.appendChild(musicBtn);
++
++    // 瀵艰埅鎸夐挳锛氬洖鍒颁富椤?(浠呭綋涓嶅湪 MainMenuScene 鏃舵樉绀?
++    if (scene.scene.key !== 'MainMenuScene') {
++      const homeBtn = document.createElement('button');
++      homeBtn.className = 'modal-btn btn-primary';
++      homeBtn.textContent = '馃彙 鍥炲埌涓婚〉';
++      homeBtn.onclick = () => {
++        this.hideModal();
++        scene.cameras.main.fadeOut(220);
++        scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('MainMenuScene'));
++      };
++      content.appendChild(homeBtn);
++    }
++
++    // 瀵艰埅鎸夐挳锛氭寫鎴樺叧鍗?(浠呭綋涓嶅湪 MapScene 鏃舵樉绀?
++    if (scene.scene.key !== 'MapScene') {
++      const mapBtn = document.createElement('button');
++      mapBtn.className = 'modal-btn btn-primary';
++      mapBtn.textContent = '馃椇锔?鎸戞垬鍏冲崱';
++      mapBtn.onclick = () => {
++        this.hideModal();
++        scene.cameras.main.fadeOut(220);
++        scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('MapScene', { saveData }));
++      };
++      content.appendChild(mapBtn);
++    }
++
++    // 瀵艰埅鎸夐挳锛氬疇鐗╁皬灞?(浠呭綋涓嶅湪 PetScene 鏃舵樉绀?
++    if (scene.scene.key !== 'PetScene') {
++      const petBtn = document.createElement('button');
++      petBtn.className = 'modal-btn btn-primary';
++      petBtn.textContent = '馃惏 瀹犵墿灏忓眿';
++      petBtn.onclick = () => {
++        this.hideModal();
++        scene.cameras.main.fadeOut(220);
++        scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start('PetScene', { saveData }));
++      };
++      content.appendChild(petBtn);
++    }
++
++    // 姣忔棩绛惧埌
++    const dailyBtn = document.createElement('button');
++    dailyBtn.className = 'modal-btn btn-secondary';
++    dailyBtn.textContent = '馃巵 姣忔棩绛惧埌';
++    dailyBtn.onclick = () => {
++      this.showDailyModal(scene, saveData);
++    };
++    content.appendChild(dailyBtn);
++
++    // 鍏ㄧ悆鎺掕姒?+    const leadBtn = document.createElement('button');
++    leadBtn.className = 'modal-btn btn-secondary';
++    leadBtn.textContent = '馃弳 鎺掕姒?;
++    leadBtn.onclick = () => {
++      this.showGlobalLeaderboardModal(scene);
++    };
++    content.appendChild(leadBtn);
++
++    // 鐧诲綍 / 涓汉涓績
++    const logged = SaveSystem.getCurrentUser();
++    const authBtn = document.createElement('button');
++    authBtn.className = 'modal-btn btn-outline';
++    authBtn.textContent = logged ? `馃 鐜╁: ${logged}` : '馃攼 鐧诲綍璐﹀彿';
++    authBtn.onclick = () => {
++      if (logged) {
++        this.showProfileModal(scene, saveData);
++      } else {
++        this.showAuthModal(scene, saveData, 'login');
++      }
++    };
++    content.appendChild(authBtn);
++
++    // 鍏抽棴鎸夐挳
++    const closeBtn = document.createElement('button');
++    closeBtn.className = 'modal-btn btn-outline';
++    closeBtn.textContent = '鍏抽棴';
++    closeBtn.onclick = () => this.hideModal();
++
++    modal.appendChild(h);
++    modal.appendChild(content);
++    modal.appendChild(closeBtn);
++    overlay.appendChild(modal);
++    document.body.appendChild(overlay);
++  }
+ }

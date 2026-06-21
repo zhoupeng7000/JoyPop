@@ -10,38 +10,46 @@
           "name": "testuser2",
           "level": 1,
           "exp": 0,
-          "hearts": 5,
-          "lastHeartTime": 1781710551494,
-          "coins": 160,
+          "hearts": 4,
+          "lastHeartTime": 1782016901168,
+          "coins": 400,
           "gems": 5
         },
         "progress": {
           "currentLevel": 1,
-          "maxLevel": 1,
-          "levelStars": {},
-          "levelScores": {}
+          "maxLevel": 4,
+          "levelStars": {
+            "1": 3,
+            "2": 3,
+            "3": 3
+          },
+          "levelScores": {
+            "1": 8561,
+            "2": 5415,
+            "3": 67684
+          }
         },
         "pet": {
           "name": "消消",
           "level": 1,
-          "exp": 0,
-          "hunger": 80,
-          "clean": 90,
-          "mood": 85,
-          "lastUpdateTime": 1781710551494,
+          "exp": 32,
+          "hunger": 39.985,
+          "clean": 24.976,
+          "mood": 14.989120833333333,
+          "lastUpdateTime": 1782017022145,
           "skin": "default",
           "accessories": []
         },
         "boosters": {
-          "hammer": 3,
+          "hammer": 2,
           "shuffle": 2,
           "extra": 3,
           "rainbow": 1,
           "pet": 2
         },
         "dailyReward": {
-          "lastClaimDate": "Thu Jun 18 2026",
-          "streak": 2
+          "lastClaimDate": "Sun Jun 21 2026",
+          "streak": 5
         },
         "achievements": [],
         "settings": {
@@ -53,5 +61,27 @@
       "createdAt": 1781710551494
     }
   ],
-  "scores": []
+  "scores": [
+    {
+      "username": "testuser2",
+      "levelId": 1,
+      "score": 8561,
+      "stars": 3,
+      "timestamp": 1781961799346
+    },
+    {
+      "username": "testuser2",
+      "levelId": 2,
+      "score": 5415,
+      "stars": 3,
+      "timestamp": 1781961850152
+    },
+    {
+      "username": "testuser2",
+      "levelId": 3,
+      "score": 67684,
+      "stars": 3,
+      "timestamp": 1782016988911
+    }
+  ]
 }

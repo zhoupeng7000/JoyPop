@@ -1,7 +1,7 @@
 // =============================================
 // JoyPop 游戏消除场景 - 重构版
 // =============================================
-import { BOARD_CONFIG, BOOSTER_TYPE, CHAPTERS } from '../config/GameConfig.js';
+import { BOARD_CONFIG, BOOSTER_TYPE, CHAPTERS, TILE_TYPES } from '../config/GameConfig.js';
 import { getLevel, getChapterForLevel } from '../config/LevelData.js';
 import { Board } from '../utils/Board.js';
 import { SaveSystem } from '../utils/SaveSystem.js';
@@ -16,9 +16,19 @@ export class GameScene extends Phaser.Scene {
     this.chapterId = getChapterForLevel(this.levelId);
     this.chapter = CHAPTERS[this.chapterId - 1];
 
-    // 动态调整方块大小以留出左侧垂直分数条的空间
-    BOARD_CONFIG.tileSize = 48;
-    BOARD_CONFIG.boardOffsetY = 155;
+    // ── 棋盘方块自适应屏幕尺寸计算 ──
+    const { width, height } = this.cameras.main;
+    const boardStartX = 74;
+    const rightMargin = 10;
+    const availableW = width - boardStartX - rightMargin;
+    
+    // 7 列
+    const step = Math.floor(availableW / BOARD_CONFIG.cols);
+    BOARD_CONFIG.tileGap = Math.max(2, Math.floor(step * 0.08));
+    BOARD_CONFIG.tileSize = step - BOARD_CONFIG.tileGap;
+    
+    // Y 轴偏移自适应
+    BOARD_CONFIG.boardOffsetY = Math.floor(height * 0.19);
   }
 
   create() {
@@ -38,11 +48,17 @@ export class GameScene extends Phaser.Scene {
 
   _drawBackground() {
     const { width, height } = this.cameras.main;
-    const g = this.add.graphics();
-    const c1 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientFrom).color;
-    const c2 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientTo).color;
-    g.fillGradientStyle(c1, c1, c2, c2, 1);
-    g.fillRect(0, 0, width, height);
+
+    if (this.textures.exists('gameplay_ui_bg')) {
+      const bg = this.add.image(width / 2, height / 2, 'gameplay_ui_bg');
+      bg.setDisplaySize(width, height);
+    } else {
+      const g = this.add.graphics();
+      const c1 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientFrom).color;
+      const c2 = Phaser.Display.Color.HexStringToColor(this.chapter.gradientTo).color;
+      g.fillGradientStyle(c1, c1, c2, c2, 1);
+      g.fillRect(0, 0, width, height);
+    }
 
     // 背景装饰小气泡
     for (let i = 0; i < 6; i++) {
@@ -73,13 +89,15 @@ export class GameScene extends Phaser.Scene {
     const { width } = this.cameras.main;
     const HUD_DEPTH = 50;
 
-    // 动态计算三个胶囊的宽度（基于屏幕宽度）
-    const p1W = Math.floor(width * 0.285); // 步数胶囊
-    const p2W = Math.floor(width * 0.415); // 目标胶囊
-    const p3W = Math.floor(width * 0.265); // 星级胶囊
-    const hudH = 44;
+    // 动态计算三个胶囊的宽度（自适应小屏，防止溢出）
+    const margin = 8;
     const gap = 6;
-    const p1X = 8;
+    const availableW = width - margin * 2 - gap * 2;
+    const p1W = Math.floor(availableW * 0.29); // 步数胶囊
+    const p2W = Math.floor(availableW * 0.42); // 目标胶囊
+    const p3W = availableW - p1W - p2W;        // 星级胶囊
+    const hudH = 44;
+    const p1X = margin;
     const p2X = p1X + p1W + gap;
     const p3X = p2X + p2W + gap;
 
@@ -90,12 +108,12 @@ export class GameScene extends Phaser.Scene {
     barLeft.lineStyle(2.5, 0xffffff, 0.9);
     barLeft.strokeRoundedRect(p1X, 10, p1W, hudH, 22);
 
-    this.add.text(p1X + p1W * 0.32, 10 + hudH / 2, '🐾', {
-      fontSize: '14px',
-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
+    // 替换 flat Emojis 🐾 为全新的高保真矢量爪印 ui_icon_moves
+    this.add.image(p1X + 18, 10 + hudH / 2, 'ui_icon_moves')
+      .setDisplaySize(24, 24).setDepth(HUD_DEPTH + 1);
 
-    this.movesText = this.add.text(p1X + p1W * 0.72, 10 + hudH / 2, `${this.levelData.moves}`, {
-      fontSize: '22px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
+    this.movesText = this.add.text(p1X + p1W - 20, 10 + hudH / 2, `${this.levelData.moves}`, {
+      fontSize: '20px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
     }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
 
     // 2. 中间奶油色目标胶囊
@@ -105,19 +123,26 @@ export class GameScene extends Phaser.Scene {
     barMid.lineStyle(2.5, 0xffb3d9, 1);
     barMid.strokeRoundedRect(p2X, 10, p2W, hudH, 22);
 
+    this.p2W = p2W;
     this.objGroup = this.add.container(p2X, 10).setDepth(HUD_DEPTH + 1);
     this._updateObjectivesUI(this.levelData.objectives.map(o => ({ ...o, done: 0 })));
 
-    // 3. 右侧星级胶囊
+    // 3. 右侧星级胶囊 (使用立体图片星星代替 emoji 文字)
     const barRight = this.add.graphics().setDepth(HUD_DEPTH);
     barRight.fillStyle(0xfff4f8, 1);
     barRight.fillRoundedRect(p3X, 10, p3W, hudH, 22);
     barRight.lineStyle(2.5, 0xffb3d9, 1);
     barRight.strokeRoundedRect(p3X, 10, p3W, hudH, 22);
 
-    this.starsText = this.add.text(p3X + p3W / 2, 10 + hudH / 2, '💗 💗 💗', {
-      fontSize: '13px',
-    }).setOrigin(0.5).setDepth(HUD_DEPTH + 1);
+    this.starImages = [];
+    const starSpacing = p3W / 4;
+    for (let i = 0; i < 3; i++) {
+      const starX = p3X + starSpacing * (i + 1);
+      const starY = 10 + hudH / 2;
+      const img = this.add.image(starX, starY, 'star_gray')
+        .setDisplaySize(22, 22).setDepth(HUD_DEPTH + 1);
+      this.starImages.push(img);
+    }
   }
 
   _updateObjectivesUI(objectives) {
@@ -127,26 +152,37 @@ export class GameScene extends Phaser.Scene {
     const firstObj = objectives[0];
     if (!firstObj) return;
 
-    // 显示当前消除目标的水果 Emoji
-    const emojiText = this.add.text(26, 21, firstObj.emoji || '🍓', { fontSize: '20px' }).setOrigin(0.5);
+    // 根据目标类型加载对应的精美水果/宝石 PNG 图片
+    let objGraphic;
+    const matchingTile = TILE_TYPES.find(t => t.emoji === firstObj.emoji || t.id === firstObj.target);
+    if (matchingTile && this.textures.exists(matchingTile.key)) {
+      objGraphic = this.add.image(22, 21, matchingTile.key).setDisplaySize(28, 28);
+    } else {
+      objGraphic = this.add.image(22, 21, firstObj.icon || 'tile_strawberry').setDisplaySize(28, 28);
+    }
     
+    // 动态计算进度条的起始与宽度，防止小屏幕下超出胶囊边界
+    const p2W = this.p2W || 150;
+    const progressX = 48;
+    const progressW = p2W - progressX - 10;
+
     // 显示目标进度文本
-    const countText = this.add.text(92, 13, `消除 ${firstObj.done}/${firstObj.count}`, {
-      fontSize: '11px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
+    const countText = this.add.text(progressX + progressW / 2, 13, `消除 ${firstObj.done}/${firstObj.count}`, {
+      fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
     }).setOrigin(0.5);
 
     // 绿色胶囊进度条背景
     const progressBg = this.add.graphics();
     progressBg.fillStyle(0xe2e6ea, 1);
-    progressBg.fillRoundedRect(56, 23, 110, 10, 5);
+    progressBg.fillRoundedRect(progressX, 23, progressW, 9, 4.5);
 
     // 进度条填充
     const pct = Math.min(firstObj.done / firstObj.count, 1);
     const progressFill = this.add.graphics();
     progressFill.fillStyle(0x20c997, 1);
-    progressFill.fillRoundedRect(56, 23, Math.max(8, 110 * pct), 10, 5);
+    progressFill.fillRoundedRect(progressX, 23, Math.max(6, progressW * pct), 9, 4.5);
 
-    this.objGroup.add([emojiText, countText, progressBg, progressFill]);
+    this.objGroup.add([objGraphic, countText, progressBg, progressFill]);
 
     // 更新步数
     if (this.movesText && this.board) {
@@ -188,11 +224,11 @@ export class GameScene extends Phaser.Scene {
     // 实时金色填充图层
     this.scoreFillG = this.add.graphics();
 
-    // 在左侧绘制 3 颗星的评级标记
+    // 在左侧绘制 3 颗星的评级标记 (使用我们预加载的 3D 星星图片)
     const starYOffsets = [0.66, 0.33, 0.05]; // 对应 1星、2星、3星高度
     this.starMarks = starYOffsets.map((pct, idx) => {
       const y = pipeY + pipeH * pct;
-      return this.add.text(14, y, '⭐', { fontSize: '13px' }).setOrigin(0.5);
+      return this.add.image(14, y, 'star_gray').setDisplaySize(16, 16);
     });
 
     this._updateScoreBar(0);
@@ -213,20 +249,22 @@ export class GameScene extends Phaser.Scene {
       this.scoreFillG.strokeRoundedRect(pipeX - pipeW/2, pipeY + pipeH - fillH, pipeW, fillH, pipeW/2);
     }
 
-    // 动态调整顶部星星 Emoji 的高光
+    // 动态调整星星高光 (切换图片纹理为金色星星)
     if (this.starMarks) {
-      if (pct >= 0.33) this.starMarks[0].setStyle({ fontSize: '16px' });
-      if (pct >= 0.66) this.starMarks[1].setStyle({ fontSize: '16px' });
-      if (pct >= 0.95) this.starMarks[2].setStyle({ fontSize: '16px' });
+      if (pct >= 0.33) { this.starMarks[0].setTexture('star_gold'); this.starMarks[0].setDisplaySize(20, 20); }
+      if (pct >= 0.66) { this.starMarks[1].setTexture('star_gold'); this.starMarks[1].setDisplaySize(20, 20); }
+      if (pct >= 0.95) { this.starMarks[2].setTexture('star_gold'); this.starMarks[2].setDisplaySize(20, 20); }
     }
 
-    // 根据星级更新右侧爱心胶囊的文字
+    // 根据星级更新右侧星级胶囊的图片星星
     let starCount = 0;
     if (pct >= 0.33) starCount = 1;
     if (pct >= 0.66) starCount = 2;
     if (pct >= 0.95) starCount = 3;
-    if (this.starsText) {
-      this.starsText.setText('💖'.repeat(starCount) + '🖤'.repeat(3 - starCount));
+    if (this.starImages) {
+      this.starImages.forEach((img, idx) => {
+        img.setTexture(idx < starCount ? 'star_gold' : 'star_gray');
+      });
     }
   }
 
@@ -255,8 +293,10 @@ export class GameScene extends Phaser.Scene {
   // ── 左下角小兔招手助威 ──────────────────────────
   _drawBunnyHelper() {
     const { height } = this.cameras.main;
-    if (this.textures.exists('bunny')) {
-      const b = this.add.image(44, height - 120, 'bunny').setScale(0.06).setDepth(10);
+    const bunnyKey = this.textures.exists('bunny_happy') ? 'bunny_happy'
+      : this.textures.exists('bunny') ? 'bunny' : null;
+    if (bunnyKey) {
+      const b = this.add.image(44, height - 120, bunnyKey).setScale(0.35).setDepth(10);
       this.tweens.add({
         targets: b,
         y: height - 124,
@@ -265,7 +305,7 @@ export class GameScene extends Phaser.Scene {
         ease: 'Sine.easeInOut'
       });
     } else {
-      const bText = this.add.text(44, height - 120, '🐰', { fontSize: '36px' }).setOrigin(0.5).setDepth(10);
+      const bText = this.add.image(44, height - 120, 'ui_animal_bunny').setDisplaySize(50, 50).setDepth(10);
       this.tweens.add({ targets: bText, y: height - 128, duration: 600, yoyo: true, repeat: -1 });
     }
   }
@@ -276,57 +316,75 @@ export class GameScene extends Phaser.Scene {
     const boosters = Object.values(BOOSTER_TYPE);
     const BOOSTER_DEPTH = 60;
 
-    const itemSize = 48;
-    const itemGap = 10;
-    const barW = boosters.length * (itemSize + itemGap) + 16;
-    const barX = 90; // 右移防止遮挡小兔
-    const barH = 66;
+    // 动态计算尺寸和间距，确保完美适配任何移动端宽度
+    const itemSize = Math.min(50, Math.floor(width * 0.125));
+    const itemGap = Math.min(8, Math.floor(width * 0.02));
+    const barW = boosters.length * (itemSize + itemGap) - itemGap + 20;
+    const barX = Math.floor((width - barW) / 2);
+    const barH = Math.floor(itemSize * 1.45);
     const barY = height - barH - 10;
 
+    // 磨砂白底栏
     const barBg = this.add.graphics().setDepth(BOOSTER_DEPTH);
-    barBg.fillStyle(0xfffcf2, 0.97);
-    barBg.fillRoundedRect(barX, barY, barW, barH, 33);
+    barBg.fillStyle(0xffffff, 0.95);
+    barBg.fillRoundedRect(barX, barY, barW, barH, barH / 2);
     barBg.lineStyle(2.5, 0xffb3d9, 1);
-    barBg.strokeRoundedRect(barX, barY, barW, barH, 33);
+    barBg.strokeRoundedRect(barX, barY, barW, barH, barH / 2);
+
+    const textureMap = {
+      hammer: 'ui_booster_hammer',
+      shuffle: 'ui_booster_shuffle',
+      extra: 'ui_booster_extra',
+      rainbow: 'ui_booster_rainbow',
+      pet: 'ui_nav_pet'
+    };
 
     boosters.forEach((booster, i) => {
-      const bx = barX + 8 + i * (itemSize + itemGap) + itemSize / 2;
+      const bx = barX + 10 + i * (itemSize + itemGap) + itemSize / 2;
       const by = barY + barH / 2;
       const count = this.saveData.boosters[booster.id] || 0;
+      const r = itemSize / 2 - 2;
 
-      // 蓝色圆形按钮
+      // 白色圆底 + 粉色/灰色描边
       const btn = this.add.graphics().setDepth(BOOSTER_DEPTH + 1);
-      btn.fillStyle(count > 0 ? 0x448aff : 0xaaaaaa, 1);
-      btn.fillCircle(bx, by, itemSize / 2 - 2);
-      btn.lineStyle(2.5, 0xffffff, 0.9);
-      btn.strokeCircle(bx, by, itemSize / 2 - 2);
-      // 高光
-      btn.fillStyle(0xffffff, 0.18);
-      btn.fillEllipse(bx, by - 7, 22, 12);
+      // 阴影
+      btn.fillStyle(0x000000, 0.08);
+      btn.fillCircle(bx + 1, by + 2, r);
+      // 按钮底色
+      btn.fillStyle(count > 0 ? 0xffffff : 0xf0f0f0, 1);
+      btn.fillCircle(bx, by, r);
+      btn.lineStyle(2.5, count > 0 ? 0xffb3d9 : 0xcccccc, 1);
+      btn.strokeCircle(bx, by, r);
 
-      this.add.text(bx, by - 1, booster.emoji, { fontSize: '18px' })
-        .setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
+      // 渲染矢量道具图标（在白色底上清晰可见）
+      const textureKey = textureMap[booster.id] || 'star_gold';
+      const iconDisplaySize = itemSize * 0.68;
+      const icon = this.add.image(bx, by, textureKey)
+        .setDisplaySize(iconDisplaySize, iconDisplaySize).setDepth(BOOSTER_DEPTH + 2);
+      if (count <= 0) {
+        icon.setAlpha(0.4);
+      }
 
       // 数量角标
       if (count > 0) {
-        const badge = this.add.graphics().setDepth(BOOSTER_DEPTH + 2);
+        const badgeX = bx + Math.floor(r * 0.7);
+        const badgeY = by - Math.floor(r * 0.6);
+        const badgeR = Math.floor(itemSize * 0.18);
+        const badge = this.add.graphics().setDepth(BOOSTER_DEPTH + 3);
         badge.fillStyle(0xff4757, 1);
-        badge.fillCircle(bx + 13, by + 12, 9);
-        this.add.text(bx + 13, by + 12, `${count}`, {
-          fontSize: '9px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
-        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 3);
-      } else {
-        // 无库存时显示加号提示
-        this.add.text(bx, by + 14, '+购买', {
-          fontSize: '7px', fontFamily: 'Nunito', fill: '#ffffff',
-        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 2);
+        badge.fillCircle(badgeX, badgeY, badgeR);
+        badge.lineStyle(1.5, 0xffffff, 1);
+        badge.strokeCircle(badgeX, badgeY, badgeR);
+        this.add.text(badgeX, badgeY, `${count}`, {
+          fontSize: `${Math.floor(itemSize * 0.22)}px`, fontFamily: 'Nunito', fontStyle: 'bold', fill: '#fff',
+        }).setOrigin(0.5).setDepth(BOOSTER_DEPTH + 4);
       }
 
-      // 交互区（zone 防止层级问题）
-      const hit = this.add.zone(bx, by, itemSize, itemSize).setInteractive().setDepth(BOOSTER_DEPTH + 3);
+      // 交互区
+      const hit = this.add.zone(bx, by, itemSize, itemSize).setInteractive().setDepth(BOOSTER_DEPTH + 5);
       hit.on('pointerdown', () => this._useBooster(booster.id, count));
-      hit.on('pointerover', () => this.tweens.add({ targets: btn, scaleX: 1.12, scaleY: 1.12, duration: 80 }));
-      hit.on('pointerout', () => this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80 }));
+      hit.on('pointerover', () => this.tweens.add({ targets: [btn, icon], scaleX: 1.1, scaleY: 1.1, duration: 80 }));
+      hit.on('pointerout', () => this.tweens.add({ targets: [btn, icon], scaleX: 1, scaleY: 1, duration: 80 }));
     });
   }
 
@@ -358,7 +416,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   _activateHammerMode(count) {
-    this._showFloatText('🔨 锤子就绪！点击消除任意格子', this.cameras.main.width / 2, 200, '#ff9f5a');
+    this._showFloatText('锤子就绪！点击消除任意格子', this.cameras.main.width / 2, 200, '#ff9f5a');
     this.hammerMode = true;
     this.saveData.boosters.hammer = Math.max(0, count - 1);
   }
@@ -410,28 +468,29 @@ export class GameScene extends Phaser.Scene {
     panel.lineStyle(4, 0xff6eb4, 1);
     panel.strokeRoundedRect(width/2 - 150, height/2 - 180, 300, 360, 30);
 
-    this.add.text(width/2, height/2 - 130, '🎉🐰🎉', { fontSize: '36px' }).setOrigin(0.5);
+    this.add.image(width/2, height/2 - 130, 'ui_animal_bunny').setDisplaySize(60, 60).setOrigin(0.5);
 
     this.add.text(width/2, height/2 - 80, '关卡完成！', {
       fontSize: '26px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#5a2d82',
     }).setOrigin(0.5);
 
-    const starEmojis = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-    const starTxt = this.add.text(width/2, height/2 - 30, starEmojis, { fontSize: '36px' }).setOrigin(0.5);
+    for (let i = 0; i < 3; i++) {
+      this.add.image(width/2 - 35 + i * 35, height/2 - 30, i < stars ? 'star_gold' : 'star_gray').setDisplaySize(32, 32).setOrigin(0.5);
+    }
 
     this.add.text(width/2, height/2 + 25, `得分: ${score.toLocaleString()}`, {
       fontSize: '18px', fontFamily: 'Nunito, sans-serif', fill: '#9b59b6', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this._addWinButton(width/2 - 70, height/2 + 95, '🗺️ 地图', 0xc77dff, 0x9c27b0, () => this._exitToMap());
-    this._addWinButton(width/2 + 70, height/2 + 95, '▶ 下一关', 0xff6eb4, 0xff9f5a, () => {
+    this._addWinButton(width/2 - 70, height/2 + 95, '返回地图', 0xc77dff, 0x9c27b0, () => this._exitToMap());
+    this._addWinButton(width/2 + 70, height/2 + 95, '下一关', 0xff6eb4, 0xff9f5a, () => {
       if (this.levelId < 50) {
         this.scene.restart({ levelId: this.levelId + 1, saveData: this.saveData });
       } else {
         this._exitToMap();
       }
     });
-    this._addWinButton(width/2, height/2 + 148, '🔁 再玩一次', 0x74c0fc, 0x339af0, () => {
+    this._addWinButton(width/2, height/2 + 148, '再玩一次', 0x74c0fc, 0x339af0, () => {
       this.scene.restart({ levelId: this.levelId, saveData: this.saveData });
     });
   }
@@ -450,7 +509,7 @@ export class GameScene extends Phaser.Scene {
     panel.lineStyle(4, 0xc77dff, 1);
     panel.strokeRoundedRect(width/2 - 145, height/2 - 170, 290, 340, 28);
 
-    this.add.text(width/2, height/2 - 130, '😭', { fontSize: '48px' }).setOrigin(0.5);
+    this.add.image(width/2, height/2 - 130, 'ui_animal_frog').setDisplaySize(60, 60).setOrigin(0.5);
 
     this.add.text(width/2, height/2 - 75, '差一点就成功了！', {
       fontSize: '20px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#5a2d82',
@@ -460,19 +519,19 @@ export class GameScene extends Phaser.Scene {
       fontSize: '16px', fontFamily: 'Nunito, sans-serif', fill: '#ff6eb4', fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    this.add.text(width/2, height/2 + 15, '❤️ 体力未扣除，放心重试！', {
+    this.add.text(width/2, height/2 + 15, '体力未扣除，放心重试！', {
       fontSize: '12px', fontFamily: 'Nunito, sans-serif', fill: '#20c997',
     }).setOrigin(0.5);
 
-    this._addWinButton(width/2, height/2 + 75, '🔁 重新挑战', 0xff6eb4, 0xff9f5a, () => {
+    this._addWinButton(width/2, height/2 + 75, '重新挑战', 0xff6eb4, 0xff9f5a, () => {
       this.scene.restart({ levelId: this.levelId, saveData: this.saveData });
     });
-    this._addWinButton(width/2, height/2 + 128, '🗺️ 返回地图', 0xc77dff, 0x9c27b0, () => this._exitToMap());
+    this._addWinButton(width/2, height/2 + 128, '返回地图', 0xc77dff, 0x9c27b0, () => this._exitToMap());
   }
 
   _showBunnyCrying() {
     const { width, height } = this.cameras.main;
-    const cry = this.add.text(width/2, height/2 - 45, '🐰💧', { fontSize: '44px' }).setOrigin(0.5).setDepth(500);
+    const cry = this.add.image(width/2, height/2 - 45, 'ui_status_drop').setDisplaySize(44, 44).setOrigin(0.5).setDepth(500);
     this.tweens.add({
       targets: cry, scaleX: 0.8, scaleY: 0.8, duration: 400, yoyo: true, repeat: 3,
       onComplete: () => cry.destroy()
@@ -510,12 +569,12 @@ export class GameScene extends Phaser.Scene {
 
   _launchFireworks() {
     const { width, height } = this.cameras.main;
-    const colors = ['🎆', '🎇', '✨', '🌟', '💥', '🎉'];
+    const colors = ['star_gold', 'tile_crystal', 'ui_status_drop', 'tile_diamond'];
     for (let i = 0; i < 20; i++) {
-      const emoji = colors[Math.floor(Math.random() * colors.length)];
+      const tex = colors[Math.floor(Math.random() * colors.length)];
       const x = Phaser.Math.Between(50, width - 50);
       const y = Phaser.Math.Between(100, height - 100);
-      const fw = this.add.text(x, y, emoji, { fontSize: `${Phaser.Math.Between(18, 36)}px` }).setAlpha(0).setDepth(200);
+      const fw = this.add.image(x, y, tex).setDisplaySize(Phaser.Math.Between(18, 36), Phaser.Math.Between(18, 36)).setAlpha(0).setDepth(200);
       this.tweens.add({
         targets: fw, alpha: 1, duration: 200, delay: i * 80,
         onComplete: () => {

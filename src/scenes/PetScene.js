@@ -29,6 +29,7 @@ export class PetScene extends Phaser.Scene {
     this._drawTopHUD(width, height);
     this._drawStatusPanel(width, height);
     this._drawEvolutionPanel(width, height);
+    this._drawPetBanner(width, height);        // 宠物状态横幅
     this._drawPetCharacter(width, height);
     this._drawActionButtons(width, height);   // ← 三个功能按钮
     this._drawNavBar(width, height);           // ← 底部导航栏（含返回主页）
@@ -52,69 +53,156 @@ export class PetScene extends Phaser.Scene {
       for (let i = 0; i < 16; i++) {
         const x = Phaser.Math.Between(10, width - 10);
         const y = Phaser.Math.Between(10, height * 0.58);
-        this.add.text(x, y, '🌸', { fontSize: '12px' }).setAlpha(0.18).setDepth(1);
+        this.add.image(x, y, 'tile_cherry').setDisplaySize(16, 16).setAlpha(0.2).setDepth(1);
       }
     }
   }
 
-  // ── 顶部宠物 HUD ──────────────────────────
+  // ── 顶部 HUD ─────────────────────────────
   _drawTopHUD(width, height) {
+    const d = this.saveData;
+    const hudY = height * 0.016;
+    const hudH = Math.min(38, height * 0.05);
+
+    const margin = 8;
+    const gap = 6;
+    const gearSize = hudH * 1.1;
+
+    // 设置齿轮按钮 (右上角)
+    const gearX = width - margin - gearSize / 2;
+    const gearY = hudY + hudH / 2;
+
+    const gearBtn = this.add.image(gearX, gearY, 'ui_settings_btn')
+      .setDisplaySize(gearSize, gearSize)
+      .setDepth(20)
+      .setInteractive({ useHandCursor: true });
+
+    gearBtn.on('pointerdown', () => {
+      this.tweens.add({ targets: gearBtn, scaleX: 0.88, scaleY: 0.88, duration: 80, yoyo: true });
+      this.time.delayedCall(100, () => {
+        ModalSystem.showNavigationSettingsModal(this, this.saveData);
+      });
+    });
+    gearBtn.on('pointerover', () => this.tweens.add({ targets: gearBtn, scaleX: 1.08, scaleY: 1.08, duration: 80 }));
+    gearBtn.on('pointerout', () => this.tweens.add({ targets: gearBtn, scaleX: 1, scaleY: 1, duration: 80 }));
+
+    // 计算三个胶囊的可用宽度 (金币、星星、体力)
+    const availableW = gearX - gearSize / 2 - margin - gap * 3;
+    const pillW = Math.floor(availableW / 3);
+
+    const coinX = margin;
+    const starX = coinX + pillW + gap;
+    const heartX = starX + pillW + gap;
+
+    // 统计星星总数
+    let totalStars = 0;
+    if (d.progress && d.progress.levelStars) {
+      totalStars = Object.values(d.progress.levelStars).reduce((sum, s) => sum + s, 0);
+    }
+
+    // 1. 金币胶囊
+    this._drawHUDCapsule(coinX, hudY, pillW, hudH, 'ui_coin', `${d.player.coins}`, () => {
+      d.player.coins += 100;
+      SaveSystem.save(d);
+      this.scene.restart({ saveData: d });
+    });
+
+    // 2. 星星胶囊
+    this._drawHUDCapsule(starX, hudY, pillW, hudH, 'star_gold', `${totalStars}`, () => {
+      ModalSystem.showAchievementsModal(this);
+    });
+
+    // 3. 体力胶囊
+    this._drawHUDCapsule(heartX, hudY, pillW, hudH, 'ui_heart', `${d.player.hearts}/5`, () => {
+      if (d.player.hearts < 5) {
+        d.player.hearts = 5;
+        SaveSystem.save(d);
+        this.scene.restart({ saveData: d });
+      }
+    });
+  }
+
+  _drawHUDCapsule(x, y, w, h, iconKey, valueText, onClickPlus) {
+    const g = this.add.graphics().setDepth(20);
+    g.fillStyle(0x000000, 0.08);
+    g.fillRoundedRect(x + 1.5, y + 2, w, h, h / 2);
+    g.fillStyle(0xfffbeb, 1);
+    g.fillRoundedRect(x, y, w, h, h / 2);
+    g.lineStyle(2.5, 0xfcd34d, 1);
+    g.strokeRoundedRect(x, y, w, h, h / 2);
+
+    const iconSize = h * 0.9;
+    const icon = this.add.image(x + h / 2 + 1, y + h / 2, iconKey)
+      .setDisplaySize(iconSize, iconSize)
+      .setDepth(21);
+
+    const textX = x + h + 2;
+    const text = this.add.text(textX, y + h / 2, valueText, {
+      fontSize: `${Math.floor(h * 0.38)}px`,
+      fontFamily: 'Nunito, sans-serif',
+      fontStyle: 'bold',
+      fill: '#5d4037',
+    }).setOrigin(0, 0.5).setDepth(21);
+
+    const plusSize = h * 0.85;
+    const plusBtn = this.add.image(x + w - plusSize / 2 - 2, y + h / 2, 'ui_plus_btn')
+      .setDisplaySize(plusSize, plusSize)
+      .setDepth(22)
+      .setInteractive({ useHandCursor: true });
+
+    plusBtn.on('pointerdown', () => {
+      this.tweens.add({ targets: plusBtn, scaleX: 0.85, scaleY: 0.85, duration: 80, yoyo: true });
+      onClickPlus();
+    });
+
+    return [g, icon, text, plusBtn];
+  }
+
+  _drawPetBanner(width, height) {
     const pet = this.saveData.pet;
     const cx  = width / 2;
-    const hudH = height * 0.09;
-    const hudW = width * 0.62;
-    const hudY = 10;
+    const bannerY = height * 0.385;
+    const bannerW = width * 0.76;
+    const bannerH = 48;
 
     const g = this.add.graphics().setDepth(10);
-    g.fillStyle(0xffffff, 0.96);
-    g.lineStyle(2.5, 0xffb3d9, 1);
-    g.fillRoundedRect(cx - hudW / 2, hudY, hudW, hudH, 20);
-    g.strokeRoundedRect(cx - hudW / 2, hudY, hudW, hudH, 20);
+    g.fillStyle(0x000000, 0.12);
+    g.fillRoundedRect(cx - bannerW / 2 + 2, bannerY + 2, bannerW, bannerH, 12);
+    g.fillStyle(0x8d6e63, 1);
+    g.fillRoundedRect(cx - bannerW / 2, bannerY, bannerW, bannerH, 12);
+    g.lineStyle(2, 0xfbbf24, 1);
+    g.strokeRoundedRect(cx - bannerW / 2, bannerY, bannerW, bannerH, 12);
 
-    // 名字
-    this.add.text(cx - 20, hudY + hudH * 0.28,
-      `🐰 ${pet.name}`, {
-        fontSize: `${Math.floor(hudH * 0.26)}px`,
-        fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
-      }).setOrigin(0.5).setDepth(11);
+    this.add.text(cx, bannerY + 12, `${pet.name} (Lv.${pet.level})`, {
+      fontSize: '13px', fontFamily: 'Nunito, sans-serif', fontStyle: 'bold', fill: '#ffffff',
+    }).setOrigin(0.5).setDepth(11);
 
-    // 等级徽章
-    const lvlBg = this.add.graphics().setDepth(11);
-    const lvlX  = cx + hudW * 0.22;
-    lvlBg.fillStyle(0xffd43b, 1);
-    lvlBg.fillRoundedRect(lvlX, hudY + 8, 46, 20, 10);
-    this.add.text(lvlX + 23, hudY + 18, `Lv.${pet.level}`, {
-      fontSize: '11px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#8a5a00',
+    const barX = cx - bannerW / 2 + 20;
+    const barY = bannerY + 28;
+    const barW = bannerW - 40;
+    const barH = 7;
+    const expPct = (pet.exp % 100) / 100;
+
+    const track = this.add.graphics().setDepth(11);
+    track.fillStyle(0x3e2723, 1);
+    track.fillRoundedRect(barX, barY, barW, barH, 3.5);
+
+    const fill = this.add.graphics().setDepth(12);
+    fill.fillStyle(0xffb3d9, 1);
+    fill.fillRoundedRect(barX, barY, Math.max(6, barW * expPct), barH, 3.5);
+
+    this.add.text(cx, barY + barH + 7, `EXP: ${pet.exp % 100} / 100`, {
+      fontSize: '8px', fontFamily: 'Nunito, sans-serif', fill: '#ffd6e7',
     }).setOrigin(0.5).setDepth(12);
-
-    // EXP 进度条
-    const expPct = (pet.exp % PET_CONFIG.expPerLevel) / PET_CONFIG.expPerLevel;
-    const barX   = cx - hudW / 2 + 16;
-    const barY   = hudY + hudH * 0.64;
-    const barW   = hudW - 32;
-    const barH   = 9;
-
-    const barBg = this.add.graphics().setDepth(11);
-    barBg.fillStyle(0xe9d8f4, 1);
-    barBg.fillRoundedRect(barX, barY, barW, barH, 5);
-
-    const barFill = this.add.graphics().setDepth(11);
-    barFill.fillStyle(0xc77dff, 1);
-    barFill.fillRoundedRect(barX, barY, Math.max(10, barW * expPct), barH, 5);
-
-    this.add.text(cx, barY + barH + 7,
-      `EXP: ${pet.exp % PET_CONFIG.expPerLevel} / ${PET_CONFIG.expPerLevel}`, {
-        fontSize: '9px', fontFamily: 'Nunito', fill: '#9b59b6',
-      }).setOrigin(0.5).setDepth(11);
   }
 
   // ── 左侧状态面板 ─────────────────────────
   _drawStatusPanel(width, height) {
     const pet  = this.saveData.pet;
     const bars = [
-      { label: '🍓 饱食', value: pet.hunger, color: 0xff6b81 },
-      { label: '🛁 清洁', value: pet.clean,  color: 0x4db6ff },
-      { label: '🌈 心情', value: pet.mood,   color: 0xffd43b },
+      { id: 'hunger', label: '    饱食', value: pet.hunger, color: 0xff6b81 },
+      { id: 'clean',  label: '    清洁', value: pet.clean,  color: 0x4db6ff },
+      { id: 'mood',   label: '    心情', value: pet.mood,   color: 0xffd43b },
     ];
 
     const panelX = 12;
@@ -141,6 +229,15 @@ export class PetScene extends Phaser.Scene {
       this.add.text(panelX + 10, iy + 2, bar.label, {
         fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#5a2d82',
       }).setDepth(11);
+
+      // 绘制状态小图标
+      if (bar.id === 'hunger') {
+        this.add.image(panelX + 16, iy + 7, 'tile_strawberry').setDisplaySize(12, 12).setDepth(12);
+      } else if (bar.id === 'mood') {
+        this.add.image(panelX + 16, iy + 7, 'star_gold').setDisplaySize(12, 12).setDepth(12);
+      } else if (bar.id === 'clean') {
+        this.add.image(panelX + 16, iy + 7, 'ui_status_drop').setDisplaySize(13, 13).setDepth(12);
+      }
 
       const track = this.add.graphics().setDepth(11);
       track.fillStyle(0xf0e6ff, 1);
@@ -176,9 +273,9 @@ export class PetScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(11);
 
     const evos = [
-      { text: '🐣 幼兔',  active: pet.level < 3 },
-      { text: '🐰 萌兔',  active: pet.level >= 3 && pet.level < 7 },
-      { text: '🐇 超萌兔', active: pet.level >= 7 },
+      { text: '幼兔',  active: pet.level < 3 },
+      { text: '萌兔',  active: pet.level >= 3 && pet.level < 7 },
+      { text: '超萌兔', active: pet.level >= 7 },
     ];
 
     const stepH = (panelH - 30) / evos.length;
@@ -213,21 +310,19 @@ export class PetScene extends Phaser.Scene {
 
     if (bunnyKey) {
       this.petSprite = this.add.image(cx, charY, bunnyKey)
-        .setScale(Math.min(width / 300, 1.5)).setDepth(5);
+        .setScale(Math.min(width / 400, 0.9)).setDepth(5);
       this.tweens.add({
         targets: this.petSprite,
         scaleY: this.petSprite.scaleY * 0.95,
         duration: 1000, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
     } else {
-      const bunnyText = this.add.text(cx, charY, '🐰', {
-        fontSize: `${Math.floor(height * 0.14)}px`,
-      }).setOrigin(0.5).setDepth(5);
+      const bunnyImg = this.add.image(cx, charY, 'ui_animal_bunny').setDisplaySize(height * 0.14, height * 0.14).setDepth(5);
       this.tweens.add({
-        targets: bunnyText, y: charY - 10,
+        targets: bunnyImg, y: charY - 10,
         duration: 1200, yoyo: true, repeat: -1,
       });
-      this.petSprite = bunnyText;
+      this.petSprite = bunnyImg;
     }
 
     // 点击宠物区域触发互动
@@ -239,9 +334,9 @@ export class PetScene extends Phaser.Scene {
   // ── 三个功能按钮（始终显式绘制）────────────
   _drawActionButtons(width, height) {
     const btnDefs = [
-      { id: 'feed', x: width * 0.18, emoji: '🍓', label: '喂食', c1: 0xff6b81, c2: 0xff9eb5 },
-      { id: 'bath', x: width * 0.50, emoji: '🛁', label: '洗澡', c1: 0x4db6ff, c2: 0x74c0fc },
-      { id: 'play', x: width * 0.82, emoji: '🎮', label: '玩耍', c1: 0xffd43b, c2: 0xffe57c },
+      { id: 'feed', x: width * 0.18, label: '喂食', c1: 0xff6b81, c2: 0xff9eb5 },
+      { id: 'bath', x: width * 0.50, label: '洗澡', c1: 0x4db6ff, c2: 0x74c0fc },
+      { id: 'play', x: width * 0.82, label: '玩耍', c1: 0xffd43b, c2: 0xffe57c },
     ];
 
     const btnY = this.BTN_Y;
@@ -266,8 +361,15 @@ export class PetScene extends Phaser.Scene {
       btn.fillEllipse(def.x, btnY - btnH / 4, btnW * 0.6, btnH * 0.38);
 
       // 图标 + 文字
-      const icon = this.add.text(def.x, btnY - 7, def.emoji, { fontSize: '20px' })
-        .setOrigin(0.5).setDepth(22);
+      let iconObj;
+      if (def.id === 'feed') {
+        iconObj = this.add.image(def.x, btnY - 7, 'tile_strawberry').setDisplaySize(24, 24).setDepth(22);
+      } else if (def.id === 'play') {
+        iconObj = this.add.image(def.x, btnY - 7, 'star_gold').setDisplaySize(24, 24).setDepth(22);
+      } else {
+        iconObj = this.add.image(def.x, btnY - 7, 'ui_status_drop').setDisplaySize(24, 24).setDepth(22);
+      }
+
       const lbl  = this.add.text(def.x, btnY + 12, def.label, {
         fontSize: '10px', fontFamily: 'Nunito', fontStyle: 'bold', fill: '#ffffff',
       }).setOrigin(0.5).setDepth(22);
@@ -278,16 +380,16 @@ export class PetScene extends Phaser.Scene {
 
       hit.on('pointerdown', () => {
         this.tweens.add({
-          targets: [btn, icon, lbl],
+          targets: [btn, iconObj, lbl],
           scaleX: 0.93, scaleY: 0.93, duration: 90, yoyo: true,
         });
         this.time.delayedCall(120, () => this._petAction(def.id));
       });
       hit.on('pointerover', () =>
-        this.tweens.add({ targets: [btn, icon, lbl], scaleX: 1.06, scaleY: 1.06, duration: 80 })
+        this.tweens.add({ targets: [btn, iconObj, lbl], scaleX: 1.06, scaleY: 1.06, duration: 80 })
       );
       hit.on('pointerout', () =>
-        this.tweens.add({ targets: [btn, icon, lbl], scaleX: 1, scaleY: 1, duration: 80 })
+        this.tweens.add({ targets: [btn, iconObj, lbl], scaleX: 1, scaleY: 1, duration: 80 })
       );
     });
   }
@@ -306,7 +408,7 @@ export class PetScene extends Phaser.Scene {
 
     const navItems = [
       {
-        emoji: '🏠', label: '首页',
+        label: '首页',
         action: () => {
           this._hideModal();
           this.cameras.main.fadeOut(220);
@@ -316,7 +418,7 @@ export class PetScene extends Phaser.Scene {
         },
       },
       {
-        emoji: '🗺️', label: '地图',
+        label: '地图',
         action: () => {
           this._hideModal();
           this.cameras.main.fadeOut(220);
@@ -325,11 +427,12 @@ export class PetScene extends Phaser.Scene {
           );
         },
       },
-      { emoji: '🐰', label: '宠物',  action: () => {} },  // 当前页
-      { emoji: '🎁', label: '奖励',  action: () => ModalSystem.showDailyModal(this, this.saveData) },
-      { emoji: '🏆', label: '排行',  action: () => ModalSystem.showGlobalLeaderboardModal(this) },
+      { label: '宠物',  action: () => {} },  // 当前页
+      { label: '奖励',  action: () => ModalSystem.showDailyModal(this, this.saveData) },
+      { label: '排行',  action: () => ModalSystem.showGlobalLeaderboardModal(this) },
     ];
 
+    const navTextures = ['ui_nav_home', 'ui_nav_map', 'ui_nav_pet', 'ui_nav_gift', 'ui_nav_trophy'];
     const ACTIVE = 2;  // 宠物 tab
     const itemW  = (width - 16) / navItems.length;
 
@@ -345,8 +448,11 @@ export class PetScene extends Phaser.Scene {
       }
 
       const col = i === ACTIVE ? '#ffffff' : '#b39ddb';
-      this.add.text(cx, cy - 10, item.emoji, { fontSize: '19px' })
-        .setOrigin(0.5).setDepth(82);
+      
+      const icon = this.add.image(cx, cy - 8, navTextures[i])
+        .setDisplaySize(28, 28).setDepth(82);
+      icon.setAlpha(i === ACTIVE ? 1 : 0.65);
+
       this.add.text(cx, cy + 12, item.label, {
         fontSize: '9px', fontFamily: 'Nunito', fontStyle: 'bold', fill: col,
       }).setOrigin(0.5).setDepth(82);
@@ -362,9 +468,9 @@ export class PetScene extends Phaser.Scene {
   _petAction(type) {
     const { width, height } = this.cameras.main;
     const cfg = {
-      feed: { label: '🍓 喂食啦，吃饱了！', stat: 'hunger', gain: PET_CONFIG.feedReward, color: '#ff6b81' },
-      bath: { label: '🛁 洗香香，干净了！', stat: 'clean',  gain: PET_CONFIG.bathReward, color: '#4db6ff' },
-      play: { label: '🎮 玩游戏，好开心！', stat: 'mood',   gain: PET_CONFIG.playReward, color: '#ffd43b' },
+      feed: { label: '喂食啦，吃饱了！', stat: 'hunger', gain: PET_CONFIG.feedReward, color: '#ff6b81' },
+      bath: { label: '洗香香，干净了！', stat: 'clean',  gain: PET_CONFIG.bathReward, color: '#4db6ff' },
+      play: { label: '玩游戏，好开心！', stat: 'mood',   gain: PET_CONFIG.playReward, color: '#ffd43b' },
     }[type];
 
     if (!cfg) return;
@@ -377,7 +483,7 @@ export class PetScene extends Phaser.Scene {
     if (this.saveData.pet.exp >= expNeeded) {
       this.saveData.pet.level++;
       this._showFloatText(
-        `🎉 宠物升级！Lv.${this.saveData.pet.level}`,
+        `宠物升级！Lv.${this.saveData.pet.level}`,
         width / 2, height * 0.38, '#ffd43b', 20
       );
     }
@@ -417,7 +523,7 @@ export class PetScene extends Phaser.Scene {
       });
     }
 
-    const bubble = this.add.text(width / 2, height * 0.33, `💬 ${msg}`, {
+    const bubble = this.add.text(width / 2, height * 0.33, msg, {
       fontSize: '15px', fontFamily: 'Nunito', fontStyle: 'bold',
       fill: '#5a2d82',
       backgroundColor: 'rgba(255,255,255,0.96)',
@@ -448,6 +554,12 @@ export class PetScene extends Phaser.Scene {
       targets: t, y: y - 55, alpha: 0, duration: 1200, ease: 'Power2',
       onComplete: () => t.destroy(),
     });
+  }
+
+  _hideModal() {
+    ModalSystem.hideModal();
+    const modal = document.getElementById('game-modal');
+    if (modal) modal.remove();
   }
 
   shutdown()   { ModalSystem.hideModal(); }

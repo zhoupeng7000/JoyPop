@@ -20,7 +20,7 @@ export class Board {
     this.stepSize = this.tileSize + this.gap;
 
     this.totalW = this.cols * this.stepSize - this.gap;
-    this.boardX = (BOARD_CONFIG.width || 450 - this.totalW) / 2 + BOARD_CONFIG.boardPaddingX;
+    this.boardX = levelData.boardX !== undefined ? levelData.boardX : ((BOARD_CONFIG.width || 450) - this.totalW) / 2 + BOARD_CONFIG.boardPaddingX;
     this.boardY = BOARD_CONFIG.boardOffsetY;
 
     this.grid = [];        // 2D array of tile objects
@@ -136,35 +136,92 @@ export class Board {
     const tileType = TILE_TYPES[tile.typeId];
     const container = scene.add.container(x, y);
 
-    // 1. 奶油白单元格背景 (统一底色，突出彩色水果)
+    // 1. 奶油白单元格背景 (森林圆润软盘风格)
     const bg = scene.add.graphics();
-    bg.fillStyle(0xfffdfa, 1);
-    bg.fillRoundedRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4, 12);
+    bg.fillStyle(0xfffef9, 0.97);
+    bg.fillRoundedRect(-size/2 + 1.5, -size/2 + 1.5, size - 3, size - 3, 14);
+    
     // 内置圆润白高光
-    bg.fillStyle(0xffffff, 0.6);
+    bg.fillStyle(0xffffff, 0.5);
     bg.fillEllipse(-size/6, -size/4, size/2.5, size/4.5);
 
-    // 2. 温暖的浅粉橙描边
+    // 2. 温暖的浅粉橙木质描边
     const border = scene.add.graphics();
     border.lineStyle(2.5, 0xffdcb9, 1);
-    border.strokeRoundedRect(-size/2 + 2, -size/2 + 2, size - 4, size - 4, 12);
+    border.strokeRoundedRect(-size/2 + 1.5, -size/2 + 1.5, size - 3, size - 3, 14);
 
-    // 3. 水果/宝石 Emojis 居中展示
-    const emoji = scene.add.text(0, 1, tileType.emoji, {
-      fontSize: `${Math.floor(size * 0.58)}px`,
-    }).setOrigin(0.5, 0.5);
+    // 3. 水果/宝石高保真图片居中展示
+    const textureKey = scene.textures.exists(tileType.key) ? tileType.key : 'star_gold';
+    const fruitSprite = scene.add.image(0, 0, textureKey);
+    fruitSprite.setDisplaySize(size - 8, size - 8);
 
-    // 4. 特殊方块标记装饰
+    // 4. 特殊方块标记及霓虹背景光晕
     if (tile.special) {
+      const glowRing = scene.add.graphics();
+      let glowColor = 0xffffff;
+      if (tile.special === SPECIAL_TILE.BOMB) glowColor = 0xffa500;
+      else if (tile.special === SPECIAL_TILE.STRIPED_H) glowColor = 0xff4757;
+      else if (tile.special === SPECIAL_TILE.STRIPED_V) glowColor = 0x339af0;
+      else if (tile.special === SPECIAL_TILE.RAINBOW) glowColor = 0xff00ff;
+
+      glowRing.fillStyle(glowColor, 0.28);
+      glowRing.fillCircle(0, 0, size / 2 - 2);
+      container.add(glowRing);
+
+      scene.tweens.add({
+        targets: glowRing,
+        scaleX: 1.18, scaleY: 1.18,
+        alpha: 0.05,
+        duration: 850,
+        yoyo: true, repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
       const specialIndicator = this._makeSpecialIndicator(scene, tile.special, size);
-      container.add([bg, border, emoji, specialIndicator]);
+      container.add([bg, border, fruitSprite, specialIndicator]);
+      this._addSpecialEffects(scene, tile, specialIndicator, size);
     } else {
-      container.add([bg, border, emoji]);
+      container.add([bg, border, fruitSprite]);
     }
 
     container.setSize(size, size);
     this.container.add(container);
     return container;
+  }
+
+  _addSpecialEffects(scene, tile, indicator, size) {
+    scene.tweens.killTweensOf(indicator);
+
+    switch (tile.special) {
+      case SPECIAL_TILE.STRIPED_H:
+      case SPECIAL_TILE.STRIPED_V:
+        scene.tweens.add({
+          targets: indicator,
+          scaleX: 1.12, scaleY: 1.12,
+          alpha: 0.85,
+          duration: 700,
+          yoyo: true, repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+        break;
+      case SPECIAL_TILE.BOMB:
+        scene.tweens.add({
+          targets: indicator,
+          scaleX: 1.16, scaleY: 1.16,
+          duration: 450,
+          yoyo: true, repeat: -1,
+          ease: 'Cubic.easeInOut'
+        });
+        break;
+      case SPECIAL_TILE.RAINBOW:
+        scene.tweens.add({
+          targets: indicator,
+          angle: 360,
+          duration: 3500,
+          repeat: -1
+        });
+        break;
+    }
   }
 
   _makeSpecialIndicator(scene, specialType, size) {
@@ -193,8 +250,10 @@ export class Board {
         g.lineBetween(0, -size/3, size/4, -size/2);
         break;
       case SPECIAL_TILE.RAINBOW:
-        // 七彩棒棒糖
+        // 七彩星芒棒棒糖
         const colors = [0xff4757, 0xff9800, 0xffd43b, 0x4caf50, 0x3f88c5, 0x9c27b0];
+        g.fillStyle(0xffffff, 0.35);
+        g.fillCircle(0, 0, size/2.3);
         colors.forEach((c, i) => {
           g.fillStyle(c, 0.95);
           g.fillCircle(
@@ -337,7 +396,32 @@ export class Board {
     await this._animateSwap(tileA, tileB);
     this._swapData(tileA, tileB);
 
-    const matches = this._findMatches();
+    let isRainbowSwap = false;
+    let rainbowTile = null;
+    let swappedTile = null;
+    if (tileA.special === SPECIAL_TILE.RAINBOW) {
+      isRainbowSwap = true;
+      rainbowTile = tileA;
+      swappedTile = tileB;
+    } else if (tileB.special === SPECIAL_TILE.RAINBOW) {
+      isRainbowSwap = true;
+      rainbowTile = tileB;
+      swappedTile = tileA;
+    }
+
+    let matches = this._findMatches();
+
+    if (isRainbowSwap) {
+      rainbowTile.swappedColorId = swappedTile.typeId;
+      if (!matches.includes(rainbowTile)) {
+        matches.push(rainbowTile);
+      }
+    } else if (tileA.special && tileB.special) {
+      // Swapping two special tiles: trigger both!
+      if (!matches.includes(tileA)) matches.push(tileA);
+      if (!matches.includes(tileB)) matches.push(tileB);
+    }
+
     if (matches.length === 0) {
       // 无匹配，还原
       await this._animateSwap(tileA, tileB);
@@ -349,7 +433,7 @@ export class Board {
     // 消耗步数
     this.movesLeft--;
     this.comboCount = 0;
-    await this._processMatches();
+    await this._processMatches(matches);
     this.isAnimating = false;
     this._checkLevelEnd();
   }
@@ -377,13 +461,16 @@ export class Board {
     });
   }
 
-  async _processMatches() {
-    let matches = this._findMatches();
+  async _processMatches(presetMatches = null) {
+    let matches = presetMatches || this._findMatches();
     while (matches.length > 0) {
       this.comboCount++;
       if (this.comboCount > 1 && this.onCombo) {
         this.onCombo(this.comboCount);
       }
+
+      // 递归激活特殊方块以展开消除集
+      this._resolveSpecialActivations(matches);
 
       // 计分
       const scoreGain = this._calcScore(matches);
@@ -402,12 +489,20 @@ export class Board {
       // 移除方块
       this._removeTiles(matches);
 
-      // 生成特殊方块
+      // 生成特殊方块到空出的格子中
       specials.forEach(s => {
-        if (this.grid[s.row][s.col]) {
-          this.grid[s.row][s.col].special = s.special;
-          this._refreshTileVisual(s.row, s.col);
-        }
+        const matchedTile = matches.find(t => t.row === s.row && t.col === s.col);
+        const typeId = matchedTile ? matchedTile.typeId : Math.floor(Math.random() * this.numTileTypes);
+        
+        this.grid[s.row][s.col] = {
+          row: s.row,
+          col: s.col,
+          typeId: typeId,
+          special: s.special,
+          gameObj: null,
+          highlighted: false,
+        };
+        this._refreshTileVisual(s.row, s.col);
       });
 
       // 处理障碍物
@@ -419,6 +514,127 @@ export class Board {
 
       // 再找匹配（连锁消除）
       matches = this._findMatches();
+    }
+  }
+
+  _resolveSpecialActivations(matches) {
+    const activated = new Set();
+    let index = 0;
+    while (index < matches.length) {
+      const tile = matches[index];
+      if (tile && tile.special && !activated.has(tile)) {
+        activated.add(tile);
+        this._drawSpecialActivationEffect(tile);
+        const affected = [];
+        this._activateSpecial(tile, affected);
+        affected.forEach(affTile => {
+          if (affTile && !matches.includes(affTile)) {
+            matches.push(affTile);
+          }
+        });
+      }
+      index++;
+    }
+  }
+
+  _drawSpecialActivationEffect(tile) {
+    if (!tile.gameObj) return;
+    const x = tile.col * this.stepSize + this.tileSize / 2;
+    const y = tile.row * this.stepSize + this.tileSize / 2;
+
+    // Play special sound effect safely
+    try {
+      this.scene.sound.play('sfx_special', { volume: 0.6 });
+    } catch (e) {
+      console.warn("Could not play sfx_special:", e);
+    }
+
+    switch (tile.special) {
+      case SPECIAL_TILE.STRIPED_H: {
+        const laser = this.scene.add.graphics();
+        laser.x = 0;
+        laser.y = y;
+        const width = this.cols * this.stepSize - this.gap;
+        laser.fillStyle(0xff4757, 0.85);
+        laser.fillRect(0, -10, width, 20);
+        laser.fillStyle(0xffffff, 0.95);
+        laser.fillRect(0, -3, width, 6);
+        this.container.add(laser);
+        this.scene.tweens.add({
+          targets: laser,
+          scaleY: 2.8,
+          alpha: 0,
+          duration: 400,
+          ease: 'Cubic.easeOut',
+          onComplete: () => laser.destroy()
+        });
+        break;
+      }
+      case SPECIAL_TILE.STRIPED_V: {
+        const laser = this.scene.add.graphics();
+        laser.x = x;
+        laser.y = 0;
+        const height = this.rows * this.stepSize - this.gap;
+        laser.fillStyle(0x339af0, 0.85);
+        laser.fillRect(-10, 0, 20, height);
+        laser.fillStyle(0xffffff, 0.95);
+        laser.fillRect(-3, 0, 6, height);
+        this.container.add(laser);
+        this.scene.tweens.add({
+          targets: laser,
+          scaleX: 2.8,
+          alpha: 0,
+          duration: 400,
+          ease: 'Cubic.easeOut',
+          onComplete: () => laser.destroy()
+        });
+        break;
+      }
+      case SPECIAL_TILE.BOMB: {
+        const blast = this.scene.add.graphics();
+        blast.x = x;
+        blast.y = y;
+        blast.fillStyle(0xffa500, 0.7);
+        blast.fillCircle(0, 0, this.tileSize * 1.5);
+        blast.fillStyle(0xffd700, 0.5);
+        blast.fillCircle(0, 0, this.tileSize * 0.8);
+        this.container.add(blast);
+        blast.scaleX = 0.1;
+        blast.scaleY = 0.1;
+        this.scene.tweens.add({
+          targets: blast,
+          scaleX: 1.2,
+          scaleY: 1.2,
+          alpha: 0,
+          duration: 450,
+          ease: 'Quart.easeOut',
+          onComplete: () => blast.destroy()
+        });
+        break;
+      }
+      case SPECIAL_TILE.RAINBOW: {
+        const wave = this.scene.add.graphics();
+        wave.x = x;
+        wave.y = y;
+        const colors = [0xff4757, 0xff9800, 0xffd43b, 0x4caf50, 0x3f88c5, 0x9c27b0];
+        colors.forEach((c, idx) => {
+          wave.lineStyle(4, c, 0.9);
+          wave.strokeCircle(0, 0, (idx + 1) * 12);
+        });
+        this.container.add(wave);
+        wave.scaleX = 0.1;
+        wave.scaleY = 0.1;
+        this.scene.tweens.add({
+          targets: wave,
+          scaleX: 2.5,
+          scaleY: 2.5,
+          alpha: 0,
+          duration: 600,
+          ease: 'Cubic.easeOut',
+          onComplete: () => wave.destroy()
+        });
+        break;
+      }
     }
   }
 
@@ -546,15 +762,22 @@ export class Board {
           }
         break;
       case SPECIAL_TILE.RAINBOW:
-        // 消除棋盘上数量最多的颜色
-        const counts = Array(TILE_TYPES.length).fill(0);
-        for (let r = 0; r < this.rows; r++)
-          for (let c = 0; c < this.cols; c++)
-            if (this.grid[r][c]) counts[this.grid[r][c].typeId]++;
-        const targetType = counts.indexOf(Math.max(...counts));
-        for (let r = 0; r < this.rows; r++)
-          for (let c = 0; c < this.cols; c++)
-            if (this.grid[r][c]?.typeId === targetType) matches.push(this.grid[r][c]);
+        if (tile.swappedColorId !== undefined) {
+          const targetType = tile.swappedColorId;
+          for (let r = 0; r < this.rows; r++)
+            for (let c = 0; c < this.cols; c++)
+              if (this.grid[r][c]?.typeId === targetType) matches.push(this.grid[r][c]);
+        } else {
+          // 消除棋盘上数量最多的颜色
+          const counts = Array(TILE_TYPES.length).fill(0);
+          for (let r = 0; r < this.rows; r++)
+            for (let c = 0; c < this.cols; c++)
+              if (this.grid[r][c]) counts[this.grid[r][c].typeId]++;
+          const targetType = counts.indexOf(Math.max(...counts));
+          for (let r = 0; r < this.rows; r++)
+            for (let c = 0; c < this.cols; c++)
+              if (this.grid[r][c]?.typeId === targetType) matches.push(this.grid[r][c]);
+        }
         break;
     }
   }
@@ -599,23 +822,161 @@ export class Board {
     const worldX = this.container.x + tile.gameObj.x;
     const worldY = this.container.y + tile.gameObj.y;
     const color = TILE_TYPES[tile.typeId]?.color || 0xffffff;
-    const emojis = ['✨', '⭐', '💫', '🌟'];
-    for (let i = 0; i < 4; i++) {
-      const t = this.scene.add.text(
-        worldX + Phaser.Math.Between(-15, 15),
-        worldY + Phaser.Math.Between(-15, 15),
-        emojis[Math.floor(Math.random() * emojis.length)],
-        { fontSize: '16px' }
-      ).setDepth(200);
-      this.scene.tweens.add({
-        targets: t,
-        x: t.x + Phaser.Math.Between(-40, 40),
-        y: t.y - Phaser.Math.Between(30, 70),
-        alpha: 0,
-        scaleX: 0.3, scaleY: 0.3,
-        duration: 600 + Math.random() * 400,
-        onComplete: () => t.destroy(),
-      });
+    
+    if (tile.special === SPECIAL_TILE.BOMB) {
+      // Bomb: massive explosion particles!
+      for (let i = 0; i < 20; i++) {
+        const size = Phaser.Math.Between(6, 12);
+        const p = this.scene.add.image(worldX, worldY, 'particle_dot')
+          .setDisplaySize(size, size)
+          .setTint(0xffa500)
+          .setDepth(200);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(150, 320);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        this.scene.tweens.add({
+          targets: p,
+          x: worldX + vx * 0.6,
+          y: worldY + vy * 0.6 - 40,
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 400 + Math.random() * 300,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+      for (let i = 0; i < 8; i++) {
+        const star = this.scene.add.image(worldX, worldY, 'star_gold')
+          .setDisplaySize(18, 18)
+          .setDepth(201);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(100, 200);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        this.scene.tweens.add({
+          targets: star,
+          x: worldX + vx * 0.6,
+          y: worldY + vy * 0.6 - 30,
+          angle: Phaser.Math.Between(-180, 180),
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 600 + Math.random() * 400,
+          ease: 'Quad.easeOut',
+          onComplete: () => star.destroy()
+        });
+      }
+    } else if (tile.special === SPECIAL_TILE.STRIPED_H || tile.special === SPECIAL_TILE.STRIPED_V) {
+      // Stripes: directional particle stream!
+      const isH = tile.special === SPECIAL_TILE.STRIPED_H;
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const size = Phaser.Math.Between(5, 10);
+        const pColor = isH ? 0xff4757 : 0x339af0;
+        const p = this.scene.add.image(worldX, worldY, 'particle_dot')
+          .setDisplaySize(size, size)
+          .setTint(pColor)
+          .setDepth(200);
+        
+        const dir = i % 2 === 0 ? 1 : -1;
+        const speed = Phaser.Math.Between(120, 280);
+        const vx = isH ? dir * speed : Phaser.Math.Between(-30, 30);
+        const vy = isH ? Phaser.Math.Between(-30, 30) : dir * speed;
+        
+        this.scene.tweens.add({
+          targets: p,
+          x: worldX + vx * 0.5,
+          y: worldY + vy * 0.5 - (isH ? 10 : 0),
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 350 + Math.random() * 250,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+    } else if (tile.special === SPECIAL_TILE.RAINBOW) {
+      // Rainbow: multi-colored sparkle burst!
+      const colors = [0xff4757, 0xff9800, 0xffd43b, 0x4caf50, 0x3f88c5, 0x9c27b0];
+      for (let i = 0; i < 18; i++) {
+        const size = Phaser.Math.Between(5, 10);
+        const pColor = colors[i % colors.length];
+        const p = this.scene.add.image(worldX, worldY, 'particle_dot')
+          .setDisplaySize(size, size)
+          .setTint(pColor)
+          .setDepth(200);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(120, 260);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        this.scene.tweens.add({
+          targets: p,
+          x: worldX + vx * 0.55,
+          y: worldY + vy * 0.55 - 25,
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 450 + Math.random() * 250,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+    } else {
+      // Normal pop: existing behavior
+      for (let i = 0; i < 8; i++) {
+        const size = Phaser.Math.Between(4, 9);
+        const p = this.scene.add.image(worldX, worldY, 'particle_dot')
+          .setDisplaySize(size, size)
+          .setTint(color)
+          .setDepth(200);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(100, 240);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        this.scene.tweens.add({
+          targets: p,
+          x: worldX + vx * 0.45,
+          y: worldY + vy * 0.45 - 35,
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 350 + Math.random() * 250,
+          ease: 'Cubic.easeOut',
+          onComplete: () => p.destroy()
+        });
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const star = this.scene.add.image(worldX, worldY, 'star_gold')
+          .setDisplaySize(14, 14)
+          .setDepth(201);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Phaser.Math.Between(60, 150);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        this.scene.tweens.add({
+          targets: star,
+          x: worldX + vx * 0.45,
+          y: worldY + vy * 0.45 - 25,
+          angle: Phaser.Math.Between(-180, 180),
+          alpha: 0,
+          scaleX: 0.1,
+          scaleY: 0.1,
+          duration: 500 + Math.random() * 300,
+          ease: 'Quad.easeOut',
+          onComplete: () => star.destroy()
+        });
+      }
     }
   }
 
@@ -642,13 +1003,38 @@ export class Board {
             this.grid[r][c] = null;
             tile.row = emptyRow;
             const targetY = emptyRow * this.stepSize + this.tileSize / 2;
+            
+            // 下落弹性参数
+            const fallDuration = 200 + (emptyRow - r) * 45;
+            
             promises.push(new Promise(resolve => {
+              if (tile.gameObj) {
+                // 1. 下落中竖向拉伸
+                tile.gameObj.setScale(0.92, 1.08);
+              }
+              
               this.scene.tweens.add({
                 targets: tile.gameObj,
                 y: targetY,
-                duration: 200 + (emptyRow - r) * 40,
-                ease: 'Bounce.easeOut',
-                onComplete: resolve,
+                duration: fallDuration,
+                ease: 'Quad.easeIn',
+                onComplete: () => {
+                  if (!tile.gameObj) { resolve(); return; }
+                  // 2. 落地横向挤压弹起
+                  this.scene.tweens.add({
+                    targets: tile.gameObj,
+                    scaleX: 1.16,
+                    scaleY: 0.8,
+                    duration: 80,
+                    yoyo: true,
+                    repeat: 1,
+                    ease: 'Sine.easeInOut',
+                    onComplete: () => {
+                      tile.gameObj?.setScale(1, 1);
+                      resolve();
+                    }
+                  });
+                }
               });
             }));
           }
@@ -670,15 +1056,38 @@ export class Board {
           this.grid[r][c] = tile;
           const targetX = c * this.stepSize + this.tileSize / 2;
           const targetY = r * this.stepSize + this.tileSize / 2;
+          
           tile.gameObj = this._makeTileObj(this.scene, tile, targetX, -spawnOffset * this.stepSize);
           this._addTileInteraction(tile);
+          
+          const fallDuration = 200 + spawnOffset * 55;
+
           promises.push(new Promise(resolve => {
+            if (tile.gameObj) {
+              tile.gameObj.setScale(0.92, 1.08);
+            }
+
             this.scene.tweens.add({
               targets: tile.gameObj,
               y: targetY,
-              duration: 200 + spawnOffset * 50,
-              ease: 'Bounce.easeOut',
-              onComplete: resolve,
+              duration: fallDuration,
+              ease: 'Quad.easeIn',
+              onComplete: () => {
+                if (!tile.gameObj) { resolve(); return; }
+                this.scene.tweens.add({
+                  targets: tile.gameObj,
+                  scaleX: 1.16,
+                  scaleY: 0.8,
+                  duration: 80,
+                  yoyo: true,
+                  repeat: 1,
+                  ease: 'Sine.easeInOut',
+                  onComplete: () => {
+                    tile.gameObj?.setScale(1, 1);
+                    resolve();
+                  }
+                });
+              }
             });
           }));
         }
@@ -822,6 +1231,17 @@ export class Board {
     tile.gameObj?.destroy();
     tile.gameObj = this._makeTileObj(this.scene, tile, x, y);
     this._addTileInteraction(tile);
+
+    if (tile.special) {
+      tile.gameObj.setScale(0);
+      this.scene.tweens.add({
+        targets: tile.gameObj,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 250,
+        ease: 'Back.easeOut'
+      });
+    }
   }
 
   destroy() {
